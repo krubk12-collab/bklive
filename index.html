@@ -126,6 +126,29 @@
     font-size:.92rem;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;
     transition:.25s;transform:translateX(-50%) translateY(20px);max-width:90vw;text-align:center}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ── ประกาศตัววิ่ง ── */
+  .marquee{max-width:1180px;margin:0 auto 6px;overflow:hidden;display:none;
+    background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.45);border-radius:12px}
+  .marquee.show{display:block}
+  .marquee .ico{float:left;padding:9px 12px;background:rgba(245,158,11,.9);color:#1f2937;
+    font-weight:600;font-size:.9rem;border-radius:11px 0 0 11px}
+  .mq-view{overflow:hidden}
+  .mq-track{display:inline-block;white-space:nowrap;padding:9px 0;color:#fde68a;
+    font-family:'Sarabun',sans-serif;font-size:.96rem;animation:mq 24s linear infinite}
+  .mq-track:hover{animation-play-state:paused}
+  @keyframes mq{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+
+  /* ── โซนใช้บ่อย/งานช่วงนี้ + ริบบิ้น ── */
+  .topzone .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .topzone .cat-head h2{color:#fde68a}
+  .card.istop{border-color:var(--accent);box-shadow:0 8px 28px rgba(245,158,11,.18)}
+  .ribbon{margin:-2px 0 2px;padding:6px 10px;border-radius:10px;font-size:.8rem;font-weight:600;
+    font-family:'Sarabun',sans-serif;line-height:1.35}
+  .ribbon.task{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+  .ribbon.pin{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .ribbon .left{font-weight:700}
+  .eb-ann{background:#fff;color:#b45309}
 </style>
 </head>
 <body>
@@ -140,6 +163,10 @@
 </header>
 
 <div class="wrap">
+  <div class="marquee" id="marquee">
+    <span class="ico">📢 ประกาศ</span>
+    <div class="mq-view"><div class="mq-track" id="mqTrack"></div></div>
+  </div>
   <div class="toolbar">
     <div class="search">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -149,7 +176,8 @@
   <div class="chips" id="chips"></div>
   <div class="editbar">
     <button class="eb-add" onclick="addApp()">➕ เพิ่มระบบงาน</button>
-    <button class="eb-exp" onclick="exportData()">💾 บันทึก / ส่งออก</button>
+    <button class="eb-ann" onclick="openAnnounceEditor()">📢 ประกาศวิ่ง</button>
+    <button class="eb-exp" onclick="exportData()">💾 สำรองข้อมูล</button>
     <button class="eb-reset" onclick="resetData()">↺ คืนค่าเริ่มต้น</button>
   </div>
   <div class="editflag">🔓 โหมดแก้ไขเปิดอยู่ — ทุกการเปลี่ยนแปลงบันทึกขึ้นส่วนกลางอัตโนมัติ ทุกคนเห็นทันที</div>
@@ -406,16 +434,17 @@ function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(APPS)); }ca
 // ── Backend ส่วนกลาง (Google Apps Script) — บันทึกแล้วทุกคนเห็นทันที ──
 const PORTAL_API = "https://script.google.com/macros/s/AKfycbxLKJkNU_4LdJGHfGEOGFQaKCQ0eSFBfs-y3Q9hNrsZ_N8kc7cYzhO0mRo6cSvM9-EtzA/exec";
 let editPass = "";
+let announce = "";
 
-// ดึงรายการล่าสุดจากส่วนกลาง (ทุกคนเห็นตรงกัน) — เรียกตอนเปิดหน้า
+// ดึงข้อมูลล่าสุดจากส่วนกลาง (apps + ประกาศ) — เรียกตอนเปิดหน้า
 async function fetchApps(){
   try{
     const res = await fetch(PORTAL_API, { cache:"no-store" });
     const j = await res.json();
-    if(j && j.ok && Array.isArray(j.apps) && j.apps.length){
-      if(editMode) return;             // กำลังแก้อยู่ อย่าทับ
-      APPS = j.apps; persist(); render();
-    }
+    if(!j || !j.ok) return;
+    if(editMode) return;               // กำลังแก้อยู่ อย่าทับ
+    if(typeof j.announce === "string"){ announce = j.announce; renderMarquee(); }
+    if(Array.isArray(j.apps) && j.apps.length){ APPS = j.apps; persist(); render(); }
   }catch(e){ /* ออฟไลน์: ใช้ค่าที่แคชไว้ */ }
 }
 
@@ -439,6 +468,71 @@ function toast(msg){
   if(!t){ t = document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); }
   t.textContent = msg; t.classList.add("show");
   clearTimeout(window.__toastT); window.__toastT = setTimeout(()=>t.classList.remove("show"), 3800);
+}
+
+// ── ประกาศตัววิ่ง ──
+function renderMarquee(){
+  const bar = document.getElementById("marquee");
+  const track = document.getElementById("mqTrack");
+  if(announce && announce.trim()){
+    track.textContent = "   " + announce.trim() + "   ";
+    bar.classList.add("show");
+  }else{
+    bar.classList.remove("show");
+  }
+}
+function openAnnounceEditor(){
+  document.getElementById("sheet").innerHTML = `
+    <h3>📢 ประกาศตัววิ่ง</h3>
+    <p style="font-size:.86rem;color:var(--muted);margin-bottom:10px;font-family:'Sarabun',sans-serif">ข้อความนี้จะวิ่งอยู่บนสุดของหน้า ให้ครูทุกคนเห็น (เว้นว่าง = ปิดประกาศ)</p>
+    <div class="fld"><textarea id="f-ann" placeholder="เช่น 📌 ส่งแผนการสอนภายใน 20 มิ.ย. · ประชุมครูวันศุกร์ 14:00">${esc(announce)}</textarea></div>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-save" onclick="saveAnnounce()">บันทึกประกาศ</button>
+    </div>`;
+  document.getElementById("modal").classList.add("show");
+}
+function saveAnnounce(){
+  announce = document.getElementById("f-ann").value;
+  renderMarquee(); closeModal(); pushAnnounce();
+}
+async function pushAnnounce(){
+  if(!editPass) return;
+  try{
+    const fd = new FormData();
+    fd.append("pass", editPass);
+    fd.append("announce", announce);
+    const res = await fetch(PORTAL_API, { method:"POST", body: fd });
+    const j = await res.json();
+    if(!j.ok) throw new Error(j.error||"ไม่ทราบสาเหตุ");
+    toast("✓ บันทึกประกาศแล้ว — ทุกคนเห็นทันที");
+  }catch(e){ toast("⚠️ บันทึกประกาศไม่สำเร็จ ("+e.message+")"); }
+}
+
+// ── วันที่ / โซนใช้บ่อย & งานช่วงนี้ ──
+const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+function todayISO(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
+function thaiDate(iso){ if(!iso) return ""; const [y,m,dd]=iso.split("-").map(Number); return dd+" "+TH_MON[m-1]; }
+function thaiRange(s,e){ if(s&&e) return thaiDate(s)+"–"+thaiDate(e); return thaiDate(e||s); }
+function daysFromToday(iso){ const a=new Date(todayISO()+"T00:00:00"), b=new Date(iso+"T00:00:00"); return Math.round((b-a)/86400000); }
+function taskActive(a){ return a && a.task && a.task.end && todayISO() <= a.task.end; }
+function isTop(a){ return !!(a && (a.pin || taskActive(a))); }
+function topSort(a,b){
+  const ta=taskActive(a), tb=taskActive(b);
+  if(ta&&!tb) return -1; if(tb&&!ta) return 1;
+  if(ta&&tb) return a.task.end < b.task.end ? -1 : (a.task.end>b.task.end?1:0);
+  return 0;
+}
+function ribbonHTML(a){
+  if(taskActive(a)){
+    const t=a.task, lbl=(t.label||"งานช่วงนี้");
+    let when;
+    if(t.start && todayISO() < t.start) when = `อีก ${daysFromToday(t.start)} วันเริ่ม`;
+    else { const left = daysFromToday(t.end); when = left<=0 ? "วันสุดท้าย" : `เหลือ ${left} วัน`; }
+    return `<div class="ribbon task">🔥 ${esc(lbl)} · 🗓️ ${thaiRange(t.start,t.end)} · <span class="left">${when}</span></div>`;
+  }
+  if(a.pin) return `<div class="ribbon pin">📌 ปักหมุด · ใช้บ่อย</div>`;
+  return "";
 }
 
 const CATS = [
@@ -477,7 +571,8 @@ function cardHTML(a, idx){
   if(!a.url) link = `<span class="open disabled">เปิดในเครื่องครู</span>`;
   else if(a.private) link = `<a class="open" href="#" onclick="openPrivate(event,'${encodeURIComponent(a.url)}')">🔒 เข้าใช้งาน →</a>`;
   else link = `<a class="open" href="${a.url}" target="_blank" rel="noopener">เข้าใช้งาน →</a>`;
-  return `<div class="card">
+  return `<div class="card${isTop(a)?' istop':''}">
+    ${ribbonHTML(a)}
     <div class="top">
       <div class="emoji">${a.emoji}</div>
       <div><h3>${a.name}</h3></div>
@@ -494,12 +589,27 @@ function cardHTML(a, idx){
 
 function render(){
   renderChips();
+  renderMarquee();
   const main = document.getElementById("main");
   const kw = keyword.trim().toLowerCase();
-  const cats = activeCat==="all" ? CATS.filter(c=>c.id!=="all") : CATS.filter(c=>c.id===activeCat);
+  const showTop = activeCat==="all" && !kw;   // โชว์โซนบนเฉพาะหน้า "ทั้งหมด" ไม่ค้นหา
   let html = "", total = 0;
+
+  if(showTop){
+    const topApps = APPS.filter(isTop).sort(topSort);
+    if(topApps.length){
+      total += topApps.length;
+      html += `<section class="cat topzone">
+        <div class="cat-head"><span class="ic">⭐</span><h2>ใช้บ่อย & งานช่วงนี้</h2><span class="count">${topApps.length} รายการ</span></div>
+        <div class="grid">${topApps.map(a=>cardHTML(a, APPS.indexOf(a))).join("")}</div>
+      </section>`;
+    }
+  }
+
+  const cats = activeCat==="all" ? CATS.filter(c=>c.id!=="all") : CATS.filter(c=>c.id===activeCat);
   cats.forEach(c=>{
     let list = APPS.filter(a=>a.cat===c.id);
+    if(showTop) list = list.filter(a=>!isTop(a));   // ตัวที่อยู่โซนบนแล้ว ไม่ซ้ำในหมวด
     if(kw) list = list.filter(a=>(a.name+a.desc+(a.tags||[]).join("")).toLowerCase().includes(kw));
     if(!list.length) return;
     total += list.length;
@@ -554,6 +664,15 @@ function openEditor(idx){
     </div>
     <div class="fld"><label>แท็ก (คั่นด้วย ,)</label><input id="f-tags" value="${esc((a.tags||[]).join(', '))}"></div>
     <div class="fld chk"><input type="checkbox" id="f-priv" ${a.private?'checked':''}><label style="margin:0">🔒 ส่วนตัว — ต้องใส่รหัสก่อนเข้าใช้งาน</label></div>
+    <div class="fld chk"><input type="checkbox" id="f-pin" ${a.pin?'checked':''}><label style="margin:0">📌 ปักหมุดขึ้นโซนบนสุด (ใช้บ่อย / งานประจำ)</label></div>
+    <div class="fld" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px">
+      <label style="color:#c2410c">🔥 งานช่วงนี้ (ไม่บังคับ) — ขึ้นโซนบน แล้วหายเองเมื่อพ้นวันสิ้นสุด</label>
+      <input id="f-task" value="${esc(a.task?a.task.label:'')}" placeholder="ชื่องาน เช่น นิเทศการสอน" style="margin-bottom:8px">
+      <div class="fld row" style="margin:0">
+        <div style="flex:1"><label>วันที่เริ่ม</label><input type="date" id="f-start" value="${a.task&&a.task.start?a.task.start:''}"></div>
+        <div style="flex:1"><label>วันสิ้นสุด</label><input type="date" id="f-end" value="${a.task&&a.task.end?a.task.end:''}"></div>
+      </div>
+    </div>
     <div class="acts">
       <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
       <button class="btn-save" onclick="saveApp(${idx})">บันทึก</button>
@@ -568,8 +687,11 @@ function saveApp(idx){
     cat: v("f-cat"), emoji: v("f-emoji")||"🔗", name: v("f-name")||"(ไม่มีชื่อ)",
     desc: v("f-desc"), url: v("f-url"), status: v("f-status"),
     tags: v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),
-    private: document.getElementById("f-priv").checked
+    private: document.getElementById("f-priv").checked,
+    pin: document.getElementById("f-pin").checked
   };
+  const tEnd = document.getElementById("f-end").value;
+  if(tEnd){ obj.task = { label: v("f-task"), start: document.getElementById("f-start").value, end: tEnd }; }
   if(idx>=0) APPS[idx] = obj; else APPS.push(obj);
   closeModal(); render(); pushApps();
 }
