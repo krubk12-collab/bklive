@@ -121,6 +121,11 @@
   .btn-save{background:var(--brand);color:#fff} .btn-cancel{background:#f1f5f9;color:#475569}
   .exp-area{width:100%;min-height:150px;font-family:monospace;font-size:.78rem;padding:10px;
     border:1.5px solid var(--line);border-radius:10px;margin-bottom:10px}
+  .toast{position:fixed;left:50%;bottom:24px;z-index:80;
+    background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-family:'Sarabun',sans-serif;
+    font-size:.92rem;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;
+    transition:.25s;transform:translateX(-50%) translateY(20px);max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -147,7 +152,7 @@
     <button class="eb-exp" onclick="exportData()">💾 บันทึก / ส่งออก</button>
     <button class="eb-reset" onclick="resetData()">↺ คืนค่าเริ่มต้น</button>
   </div>
-  <div class="editflag">🔓 โหมดแก้ไขเปิดอยู่ — การเปลี่ยนแปลงถูกบันทึกในเครื่องนี้ · กด “บันทึก / ส่งออก” เพื่อเผยแพร่ให้ทุกคน</div>
+  <div class="editflag">🔓 โหมดแก้ไขเปิดอยู่ — ทุกการเปลี่ยนแปลงบันทึกขึ้นส่วนกลางอัตโนมัติ ทุกคนเห็นทันที</div>
 </div>
 
 <main class="wrap" id="main"></main>
@@ -166,73 +171,225 @@
 // ===== ข้อมูลระบบงานทั้งหมด =====
 // status: ok = ใช้งานได้ | auth = ต้องเจ้าของ authorize ก่อน | local = เครื่องครู
 const DEFAULT_APPS = [
-  // ── ฐานข้อมูลแกนกลาง ──
-  {cat:"core", emoji:"🏛️", name:"ระบบฐานข้อมูลโรงเรียน",
-   desc:"ฐานข้อมูลกลางของโรงเรียน — ข้อมูลนักเรียน ผู้ปกครอง ครู รายวิชา ห้องเรียน และคะแนน ระบบอื่นๆ ดึงข้อมูลจากที่นี่",
-   url:"https://sites.google.com/nonedu2.go.th/bk2/", tags:["ข้อมูลกลาง","MASTER"], status:"ok"},
-
-  // ── งานวิชาการ / การสอน ──
-  {cat:"academic", emoji:"📅", name:"ตารางสอน + บันทึกการเข้าสอน",
-   desc:"ตารางสอนมัธยม (ภาพรวม/รายห้อง/รายครู) แสดงคาบปัจจุบันแบบสด พร้อมบันทึกการเข้าสอนรายวัน 7 สถานะ",
-   url:"https://krubk12-collab.github.io/bklive-timetable/", tags:["ตารางสอน","บันทึกการสอน"], status:"ok"},
-  {cat:"academic", emoji:"🔍", name:"ระบบนิเทศการสอน",
-   desc:"วางแผนและบันทึกการนิเทศ/สังเกตการสอน เลือกคาบ ผู้นิเทศ และวันที่ พร้อมเช็คคาบชน",
-   url:"https://sites.google.com/view/bangkho360/", tags:["นิเทศ"], status:"ok"},
-  {cat:"academic", emoji:"📝", name:"แบบประเมินนิเทศ (PACAKIDs)",
-   desc:"ฟอร์มให้คะแนนการสอน 16 ข้อ 5 ด้าน (เต็ม 80) หลังเข้านิเทศจริง พร้อมสรุปผลรายปีและรายงานรายคน",
-   url:"https://krubk12-collab.github.io/bklive-supervision-form/", tags:["ประเมินการสอน"], status:"ok"},
-  {cat:"academic", emoji:"📚", name:"คลังข้อสอบ PISA",
-   desc:"คลังข้อสอบแนว PISA สพป.นนทบุรี 2 แยกระดับประถม/มัธยม และวิชาการอ่าน วิทยาศาสตร์ คณิตศาสตร์",
-   url:"https://script.google.com/macros/s/AKfycbz8WZKFqxKYsTH0k5awl8gMOfCS1Dgh0gya25DcZ_vMSqS-QB_MlNRhR7fdkIPLShmc/exec", tags:["ข้อสอบ","สพป."], status:"ok"},
-  {cat:"academic", emoji:"🏅", name:"ระบบสร้างเกียรติบัตร",
-   desc:"อัปโหลดเทมเพลตเอง ลากวางข้อความ ดึงรายชื่อจากฐานข้อมูล ติ๊กเลือกแล้วออกเป็น PDF รวมทีเดียว",
-   url:"https://script.google.com/macros/s/AKfycby4sKnQTZSGi6XO5tk-8N05qZzcrfUM20DJhn7XoHXDBs06RBg4jsxDrKgxbxHHj97rww/exec", tags:["เกียรติบัตร","PDF"], status:"ok"},
-
-  // ── งานดูแลช่วยเหลือนักเรียน ──
-  {cat:"student", emoji:"👤", name:"ข้อมูลนักเรียนรายบุคคล + เยี่ยมบ้าน",
-   desc:"โปรไฟล์นักเรียนรายคน ตรวจสุขภาพรายวัน (ผม/เล็บ/ฟัน/แต่งกาย) และบันทึกการเยี่ยมบ้านตามแบบ สพฐ.",
-   url:"https://script.google.com/macros/s/AKfycbxUli1ed9xM0jC5-lytK51i4Pn9-YEMkfX9LGCjVvzJraLeIvEVzr-8AjugAbaECYYwGQ/exec", tags:["นักเรียน","สุขภาพ","เยี่ยมบ้าน"], status:"ok"},
-  {cat:"student", emoji:"🏛️", name:"ระบบสภานักเรียน",
-   desc:"แต่งตั้งประธานนักเรียน จัดโครงสร้างสภา 8 ฝ่าย และมอบหมายงาน/โปรเจกต์ ดึงรายชื่อจากฐานข้อมูล",
-   url:"https://script.google.com/macros/s/AKfycbwuZCL1V6S6_7OR9q8lvvYXksfmHLUmKy4VY-3D1M9tDNvEAl5vP6gfAupsl53P2LVuxQ/exec", tags:["สภานักเรียน"], status:"ok"},
-  {cat:"student", emoji:"🗳️", name:"ระบบเลือกตั้งประธานนักเรียน",
-   desc:"ลงทะเบียนและตรวจสอบสิทธิ์ผู้มีสิทธิ์เลือกตั้ง ป.1–ม.3 พร้อม Dashboard สารสนเทศการเลือกตั้ง",
-   url:"https://sites.google.com/nonedu2.go.th/election/", tags:["เลือกตั้ง"], status:"ok"},
-
-  // ── งานธุรการ / บริหาร ──
-  {cat:"admin", emoji:"📨", name:"e-สารบรรณ บางโค",
-   desc:"ระบบหนังสือราชการเข้า + คำสั่งภายใน ลงทะเบียน-มอบหมาย-รับทราบพร้อมลายเซ็นวาดสด ปฏิทินภาพรวม และ AI ช่วยอ่านหนังสือ",
-   url:"https://script.google.com/macros/s/AKfycbwee1Ycd2Drn5bVmmGm07QSHTMPkBVxMXiuQKrh3-eBR_6Q5IZ-VfstvBKLWzmvOV8v/exec", tags:["สารบรรณ","คำสั่ง","AI"], status:"auth"},
-  {cat:"admin", emoji:"🎯", name:"รวบรวมข้อมูลนโยบาย 4 ด้าน",
-   desc:"ให้ครูแต่ละด้านอัปโหลดไฟล์/รูปเข้า Drive พร้อม Dashboard หลอดความก้าวหน้า แกลเลอรี และกระดานบันทึก",
-   url:"https://script.google.com/macros/s/AKfycbwoPoZXC7lS_CTKElnFY9O3o9buzxmijST0rXb_DknrAA8XuiNmHX2djxsAEFZB8v63/exec", tags:["นโยบาย","สพฐ."], status:"auth"},
-  {cat:"admin", emoji:"🔎", name:"บันทึกของหายได้คืน",
-   desc:"แจ้ง/บันทึกของหายพร้อมรูป และอัปเดตสถานะเมื่อเจ้าของมารับคืน",
-   url:"https://sites.google.com/nonedu2.go.th/found/", tags:["ของหาย"], status:"ok"},
-
-  // ── เก็บข้อมูล / เครื่องมือ ──
-  {cat:"tool", emoji:"📋", name:"ระบบเก็บข้อมูล (Collect)",
-   desc:"ระบบกรอก/เก็บข้อมูลอเนกประสงค์หลายโหมด — ฟอร์ม บันทึกครู ติ๊กรายชื่อแทนการก๊อปไลน์ และจัดกลุ่มชุมนุม",
-   url:"https://sites.google.com/nonedu2.go.th/testbk/", tags:["เก็บข้อมูล"], status:"ok"},
-  {cat:"tool", emoji:"📖", name:"ระบบห้องสมุด",
-   desc:"ระบบยืม-คืนหนังสือ และหน้าแสดงภาพรวมห้องสมุด",
-   url:"https://sites.google.com/nonedu2.go.th/bkl", tags:["ห้องสมุด"], status:"ok"},
-
-  // ── Dashboard ภาพรวม ──
-  {cat:"dash", emoji:"📊", name:"Dashboard ระบบสารสนเทศ",
-   desc:"หน้ารวมทุกเว็บแอป การ์ดระบบงาน ตาราง Sheets และงานค้าง ดึงข้อมูลสดจากชีตคอนโทรล",
-   url:"https://krubk12-collab.github.io/bklive-dashboard/", tags:["ภาพรวม"], status:"ok"},
-  {cat:"dash", emoji:"🎮", name:"ห้องทำงานครูบีเค",
-   desc:"Dashboard สไตล์เกม แสดงภาพรวมงานสอน งานเว็บ งานนักเรียน และงานส่วนตัว ผ่านตัวการ์ตูน 4 ตัวแบบสด",
-   url:"https://krubk12-collab.github.io/work-dashboard/", tags:["ส่วนตัว","Gamification"], status:"ok"},
-  {cat:"dash", emoji:"🗂️", name:"Personal Dashboard (bknote)",
-   desc:"หน้ารวม embed ระบบต่างๆ สำหรับใช้งานส่วนตัว",
-   url:"https://sites.google.com/view/bknote", tags:["ส่วนตัว"], status:"ok"},
-
-  // ── การเงินส่วนตัว ──
-  {cat:"finance", emoji:"💰", name:"GPF Dashboard (กบข.)",
-   desc:"ติดตามราคา NAV กองทุน กบข. 4 แผน พร้อมตัววิเคราะห์สัญญาณเทคนิค (เครื่องมือทำงานในเครื่องครู)",
-   url:"", tags:["กบข.","การลงทุน"], status:"local"},
+  {
+    "cat": "core",
+    "emoji": "🏛️",
+    "name": "เช็ตสถิติประจำวัน + ระบบฐานข้อมูลโรงเรียน",
+    "desc": "ฐานข้อมูลกลางของโรงเรียน — ข้อมูลนักเรียน ผู้ปกครอง ครู รายวิชา ห้องเรียน และคะแนน ระบบอื่นๆ ดึงข้อมูลจากที่นี่",
+    "url": "https://sites.google.com/nonedu2.go.th/bk2/",
+    "status": "ok",
+    "tags": [
+      "ข้อมูลกลาง",
+      "MASTER"
+    ],
+    "private": false
+  },
+  {
+    "cat": "academic",
+    "emoji": "📅",
+    "name": "ตารางสอน + บันทึกการเข้าสอน",
+    "desc": "ตารางสอนมัธยม (ภาพรวม/รายห้อง/รายครู) แสดงคาบปัจจุบันแบบสด พร้อมบันทึกการเข้าสอนรายวัน 7 สถานะ",
+    "url": "https://krubk12-collab.github.io/bklive-timetable/",
+    "tags": [
+      "ตารางสอน",
+      "บันทึกการสอน"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "academic",
+    "emoji": "🔍",
+    "name": "Dashboard สรุปผลการนิเทศ",
+    "desc": "Dashboard สรุปผลการนิเทศ วิเคราะห์รายคน ภาพรวมทั้งหมด เลือกแสดงผลเป็นเทอม ตามปีการศึกษา",
+    "url": "https://krubk12-collab.github.io/bklive-supervision-dashboard/",
+    "status": "ok",
+    "tags": [
+      "สรุปผลการนิเทศ"
+    ],
+    "private": false
+  },
+  {
+    "cat": "core",
+    "emoji": "📝",
+    "name": "แบบประเมินนิเทศ (PACAKIDs)",
+    "desc": "ฟอร์มให้คะแนนการสอน 16 ข้อ 5 ด้าน (เต็ม 80) หลังเข้านิเทศจริง พร้อมสรุปผลรายปีและรายงานรายคน",
+    "url": "https://krubk12-collab.github.io/bklive-supervision-form/",
+    "status": "ok",
+    "tags": [
+      "ฟอร์มนิเทศ",
+      "แบบนิเทศ"
+    ],
+    "private": false
+  },
+  {
+    "cat": "academic",
+    "emoji": "📚",
+    "name": "คลังข้อสอบ PISA",
+    "desc": "คลังข้อสอบแนว PISA สพป.นนทบุรี 2 แยกระดับประถม/มัธยม และวิชาการอ่าน วิทยาศาสตร์ คณิตศาสตร์",
+    "url": "https://script.google.com/macros/s/AKfycbz8WZKFqxKYsTH0k5awl8gMOfCS1Dgh0gya25DcZ_vMSqS-QB_MlNRhR7fdkIPLShmc/exec",
+    "tags": [
+      "ข้อสอบ",
+      "สพป."
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "academic",
+    "emoji": "🏅",
+    "name": "ระบบสร้างเกียรติบัตร",
+    "desc": "อัปโหลดเทมเพลตเอง ลากวางข้อความ ดึงรายชื่อจากฐานข้อมูล ติ๊กเลือกแล้วออกเป็น PDF รวมทีเดียว",
+    "url": "https://script.google.com/macros/s/AKfycby4sKnQTZSGi6XO5tk-8N05qZzcrfUM20DJhn7XoHXDBs06RBg4jsxDrKgxbxHHj97rww/exec",
+    "tags": [
+      "เกียรติบัตร",
+      "PDF"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "student",
+    "emoji": "👤",
+    "name": "ข้อมูลนักเรียนรายบุคคล + เยี่ยมบ้าน",
+    "desc": "โปรไฟล์นักเรียนรายคน ตรวจสุขภาพรายวัน (ผม/เล็บ/ฟัน/แต่งกาย) และบันทึกการเยี่ยมบ้านตามแบบ สพฐ.",
+    "url": "https://script.google.com/macros/s/AKfycbxUli1ed9xM0jC5-lytK51i4Pn9-YEMkfX9LGCjVvzJraLeIvEVzr-8AjugAbaECYYwGQ/exec",
+    "tags": [
+      "นักเรียน",
+      "สุขภาพ",
+      "เยี่ยมบ้าน"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "student",
+    "emoji": "🏛️",
+    "name": "ระบบสภานักเรียน",
+    "desc": "แต่งตั้งประธานนักเรียน จัดโครงสร้างสภา 8 ฝ่าย และมอบหมายงาน/โปรเจกต์ ดึงรายชื่อจากฐานข้อมูล",
+    "url": "https://script.google.com/macros/s/AKfycbwuZCL1V6S6_7OR9q8lvvYXksfmHLUmKy4VY-3D1M9tDNvEAl5vP6gfAupsl53P2LVuxQ/exec",
+    "tags": [
+      "สภานักเรียน"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "student",
+    "emoji": "🗳️",
+    "name": "ระบบเลือกตั้งประธานนักเรียน",
+    "desc": "ลงทะเบียนและตรวจสอบสิทธิ์ผู้มีสิทธิ์เลือกตั้ง ป.1–ม.3 พร้อม Dashboard สารสนเทศการเลือกตั้ง",
+    "url": "https://sites.google.com/nonedu2.go.th/election/",
+    "status": "ok",
+    "tags": [
+      "เลือกตั้ง"
+    ],
+    "private": false
+  },
+  {
+    "cat": "admin",
+    "emoji": "📨",
+    "name": "e-สารบรรณ บางโค",
+    "desc": "ระบบหนังสือราชการเข้า + คำสั่งภายใน ลงทะเบียน-มอบหมาย-รับทราบพร้อมลายเซ็นวาดสด ปฏิทินภาพรวม และ AI ช่วยวิเคราะห์หนังสือราชการ",
+    "url": "https://script.google.com/macros/s/AKfycbwee1Ycd2Drn5bVmmGm07QSHTMPkBVxMXiuQKrh3-eBR_6Q5IZ-VfstvBKLWzmvOV8v/exec",
+    "status": "auth",
+    "tags": [
+      "สารบรรณ",
+      "คำสั่ง",
+      "AI"
+    ],
+    "private": false
+  },
+  {
+    "cat": "admin",
+    "emoji": "🎯",
+    "name": "(ไม่ใช้งานแล้ว)รวบรวมข้อมูลนโยบาย 4 ด้าน",
+    "desc": "ให้ครูแต่ละด้านอัปโหลดไฟล์/รูปเข้า Drive พร้อม Dashboard หลอดความก้าวหน้า แกลเลอรี และกระดานบันทึก",
+    "url": "https://script.google.com/macros/s/AKfycbwoPoZXC7lS_CTKElnFY9O3o9buzxmijST0rXb_DknrAA8XuiNmHX2djxsAEFZB8v63/exec",
+    "status": "auth",
+    "tags": [
+      "นโยบาย",
+      "สพฐ."
+    ],
+    "private": false
+  },
+  {
+    "cat": "core",
+    "emoji": "🔎",
+    "name": "บันทึกของหายได้คืน",
+    "desc": "แจ้ง/บันทึกของหายพร้อมรูป และอัปเดตสถานะเมื่อเจ้าของมารับคืน โฟสสรุปลง Page FB อัตโนมัติ",
+    "url": "https://sites.google.com/nonedu2.go.th/found/",
+    "status": "ok",
+    "tags": [
+      "ของหาย"
+    ],
+    "private": false
+  },
+  {
+    "cat": "tool",
+    "emoji": "📋",
+    "name": "(กำลังปรับปรุง) ระบบเก็บข้อมูล (Collect)",
+    "desc": "ระบบกรอก/เก็บข้อมูลอเนกประสงค์หลายโหมด — ฟอร์ม บันทึกครู ติ๊กรายชื่อแทนการก๊อปไลน์ และจัดกลุ่มชุมนุม",
+    "url": "https://sites.google.com/nonedu2.go.th/testbk/",
+    "status": "ok",
+    "tags": [
+      "เก็บข้อมูล"
+    ],
+    "private": false
+  },
+  {
+    "cat": "tool",
+    "emoji": "📖",
+    "name": "ระบบห้องสมุด",
+    "desc": "ระบบยืม-คืนหนังสือ และหน้าแสดงภาพรวมห้องสมุด",
+    "url": "https://sites.google.com/nonedu2.go.th/bkl",
+    "tags": [
+      "ห้องสมุด"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "dash",
+    "emoji": "📊",
+    "name": "Dashboard ระบบสารสนเทศ",
+    "desc": "หน้ารวมทุกเว็บแอป การ์ดระบบงาน ตาราง Sheets และงานค้าง ดึงข้อมูลสดจากชีตคอนโทรล",
+    "url": "https://krubk12-collab.github.io/bklive-dashboard/",
+    "tags": [
+      "ภาพรวม"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "dash",
+    "emoji": "🎮",
+    "name": "ห้องทำงานครูบีเค",
+    "desc": "Dashboard สไตล์เกม แสดงภาพรวมงานสอน งานเว็บ งานนักเรียน และงานส่วนตัว ผ่านตัวการ์ตูน 4 ตัวแบบสด",
+    "url": "https://krubk12-collab.github.io/work-dashboard/",
+    "tags": [
+      "ส่วนตัว",
+      "Gamification"
+    ],
+    "status": "ok"
+  },
+  {
+    "cat": "dash",
+    "emoji": "🗂️",
+    "name": "Personal Dashboard (bknote)",
+    "desc": "หน้ารวม embed ระบบต่างๆ สำหรับใช้งานส่วนตัว",
+    "url": "https://sites.google.com/view/bknote",
+    "status": "local",
+    "tags": [
+      "ส่วนตัว"
+    ],
+    "private": true
+  },
+  {
+    "cat": "finance",
+    "emoji": "💰",
+    "name": "GPF Dashboard (กบข.)",
+    "desc": "ติดตามราคา NAV กองทุน กบข. 4 แผน พร้อมตัววิเคราะห์สัญญาณเทคนิค (เครื่องมือทำงานในเครื่องครู)",
+    "url": "",
+    "tags": [
+      "กบข.",
+      "การลงทุน"
+    ],
+    "status": "local"
+  }
 ];
 
 // ── โหมดแก้ไข: รหัสผ่าน + เก็บข้อมูลในเครื่อง (localStorage) ──
@@ -245,6 +402,44 @@ function loadApps(){
 let APPS = loadApps();
 let editMode = false;
 function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(APPS)); }catch(e){} }
+
+// ── Backend ส่วนกลาง (Google Apps Script) — บันทึกแล้วทุกคนเห็นทันที ──
+const PORTAL_API = "https://script.google.com/macros/s/AKfycbxLKJkNU_4LdJGHfGEOGFQaKCQ0eSFBfs-y3Q9hNrsZ_N8kc7cYzhO0mRo6cSvM9-EtzA/exec";
+let editPass = "";
+
+// ดึงรายการล่าสุดจากส่วนกลาง (ทุกคนเห็นตรงกัน) — เรียกตอนเปิดหน้า
+async function fetchApps(){
+  try{
+    const res = await fetch(PORTAL_API, { cache:"no-store" });
+    const j = await res.json();
+    if(j && j.ok && Array.isArray(j.apps) && j.apps.length){
+      if(editMode) return;             // กำลังแก้อยู่ อย่าทับ
+      APPS = j.apps; persist(); render();
+    }
+  }catch(e){ /* ออฟไลน์: ใช้ค่าที่แคชไว้ */ }
+}
+
+// บันทึกขึ้นส่วนกลาง (ต้องมีรหัสที่ใส่ตอนเข้าโหมดแก้ไข)
+async function pushApps(){
+  persist();                           // แคชในเครื่องก่อนเสมอ
+  if(!editPass) return;
+  try{
+    const fd = new FormData();
+    fd.append("pass", editPass);
+    fd.append("apps", JSON.stringify(APPS));
+    const res = await fetch(PORTAL_API, { method:"POST", body: fd });
+    const j = await res.json();
+    if(!j.ok) throw new Error(j.error || "ไม่ทราบสาเหตุ");
+    toast("✓ บันทึกขึ้นส่วนกลางแล้ว — ทุกคนเห็นทันที");
+  }catch(e){ toast("⚠️ บันทึกส่วนกลางไม่สำเร็จ ("+e.message+") · เก็บในเครื่องไว้แล้ว"); }
+}
+
+function toast(msg){
+  let t = document.getElementById("toast");
+  if(!t){ t = document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(window.__toastT); window.__toastT = setTimeout(()=>t.classList.remove("show"), 3800);
+}
 
 const CATS = [
   {id:"all",      label:"ทั้งหมด",            ic:"✨"},
@@ -334,7 +529,7 @@ function toggleEdit(){
   const p = prompt("ใส่รหัสผ่านเพื่อเข้าโหมดแก้ไข");
   if(p === null) return;
   if(p !== EDIT_PASS){ alert("รหัสผ่านไม่ถูกต้อง"); return; }
-  editMode = true; document.body.classList.add("editing");
+  editPass = p; editMode = true; document.body.classList.add("editing");
   document.getElementById("fab").textContent = "✓ เสร็จสิ้น"; render();
 }
 
@@ -376,20 +571,20 @@ function saveApp(idx){
     private: document.getElementById("f-priv").checked
   };
   if(idx>=0) APPS[idx] = obj; else APPS.push(obj);
-  persist(); closeModal(); render();
+  closeModal(); render(); pushApps();
 }
 function addApp(){ openEditor(-1); }
-function deleteApp(idx){ if(confirm(`ลบ “${APPS[idx].name}” ?`)){ APPS.splice(idx,1); persist(); render(); } }
-function resetData(){ if(confirm("คืนค่าเริ่มต้นทั้งหมด? (ลบการแก้ไขในเครื่องนี้)")){ localStorage.removeItem(LS_KEY); APPS = loadApps(); render(); } }
+function deleteApp(idx){ if(confirm(`ลบ “${APPS[idx].name}” ?`)){ APPS.splice(idx,1); render(); pushApps(); } }
+function resetData(){ if(confirm("คืนค่าเริ่มต้นทั้งหมด? (มีผลกับทุกคน)")){ APPS = JSON.parse(JSON.stringify(DEFAULT_APPS)); render(); pushApps(); } }
 
 // ── ส่งออก: ดาวน์โหลดไฟล์ apps.json เพื่อเผยแพร่ให้ทุกคน ──
 function exportData(){
   const json = JSON.stringify(APPS, null, 2);
   document.getElementById("sheet").innerHTML = `
-    <h3>💾 บันทึก / ส่งออกข้อมูล</h3>
+    <h3>💾 ข้อมูล / สำรอง</h3>
     <p style="font-size:.88rem;color:var(--muted);margin-bottom:10px;font-family:'Sarabun',sans-serif">
-      ✅ การแก้ไขถูกบันทึกในเครื่องนี้แล้ว (เห็นเฉพาะเบราว์เซอร์นี้)<br>
-      📢 หากต้องการให้ <b>ทุกคนเห็น</b> ให้กด “ดาวน์โหลด” แล้วส่งไฟล์ให้ผู้ดูแลอัปเดตเว็บ (เว็บเป็นแบบ static จึงไม่ซิงก์อัตโนมัติ)
+      ✅ ทุกการแก้ไขถูก <b>บันทึกขึ้นส่วนกลางอัตโนมัติ</b> แล้ว — ทุกคนที่เปิดเว็บเห็นทันที<br>
+      💾 ปุ่มด้านล่างไว้ <b>ดาวน์โหลดสำรองข้อมูล</b> เก็บไว้เผื่อกรณีฉุกเฉิน (ไม่จำเป็นต้องกดทุกครั้ง)
     </p>
     <textarea class="exp-area" readonly onclick="this.select()">${esc(json)}</textarea>
     <div class="acts">
@@ -418,6 +613,7 @@ function tick(){
 }
 tick(); setInterval(tick,1000);
 render();
+fetchApps();   // ดึงรายการล่าสุดจากส่วนกลางทับค่าเริ่มต้น
 </script>
 </body>
 </html>
