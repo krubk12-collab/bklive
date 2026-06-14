@@ -77,6 +77,50 @@
     header h1{font-size:1.45rem}
     .grid{grid-template-columns:1fr}
   }
+
+  /* ── ปุ่ม/โหมดแก้ไข ── */
+  .fab{position:fixed;right:18px;bottom:18px;z-index:40;border:none;cursor:pointer;
+    background:var(--brand);color:#fff;border-radius:999px;padding:13px 18px;font-family:inherit;
+    font-weight:600;font-size:.95rem;box-shadow:0 8px 24px rgba(37,99,235,.4)}
+  .fab:hover{background:#1d4ed8}
+  body.editing .fab{background:var(--ok)}
+  .editbar{display:none;gap:10px;flex-wrap:wrap;justify-content:center;margin:14px auto 0;max-width:760px}
+  body.editing .editbar{display:flex}
+  .editbar button{border:none;cursor:pointer;border-radius:12px;padding:9px 14px;font-family:inherit;
+    font-weight:500;font-size:.9rem;box-shadow:var(--shadow)}
+  .eb-add{background:#fff;color:var(--brand)} .eb-exp{background:#fff;color:#0f766e}
+  .eb-reset{background:#fff;color:#b91c1c}
+  .editflag{display:none;text-align:center;color:#fde68a;font-size:.85rem;margin-top:10px;
+    font-weight:300;font-family:'Sarabun',sans-serif}
+  body.editing .editflag{display:block}
+  .card .cardedit{display:none;gap:8px;margin-top:6px}
+  body.editing .card .cardedit{display:flex}
+  .card .cardedit button{flex:1;border:none;cursor:pointer;border-radius:10px;padding:9px;
+    font-family:inherit;font-weight:500;font-size:.86rem}
+  .ce-edit{background:#eff6ff;color:var(--brand)} .ce-del{background:#fef2f2;color:#dc2626}
+  body.editing .card{border-color:#cbd5e1}
+  body.editing .open{opacity:.5;pointer-events:none}
+  .b-priv{background:#fae8ff;color:#a21caf}
+
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:60;display:none;
+    align-items:flex-start;justify-content:center;overflow:auto;padding:30px 14px}
+  .modal.show{display:flex}
+  .sheet{background:#fff;border-radius:18px;width:100%;max-width:480px;padding:22px;box-shadow:var(--shadow)}
+  .sheet h3{font-size:1.15rem;font-weight:600;margin-bottom:14px;color:var(--ink)}
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-size:.85rem;font-weight:500;color:var(--muted);margin-bottom:4px}
+  .fld input,.fld select,.fld textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);
+    border-radius:10px;font-family:inherit;font-size:.95rem;outline:none}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--brand)}
+  .fld textarea{resize:vertical;min-height:60px;font-family:'Sarabun',sans-serif}
+  .fld.row{display:flex;gap:10px}
+  .chk{display:flex;align-items:center;gap:8px}.chk input{width:auto}
+  .sheet .acts{display:flex;gap:10px;margin-top:8px}
+  .sheet .acts button{flex:1;border:none;cursor:pointer;border-radius:12px;padding:12px;
+    font-family:inherit;font-weight:600;font-size:.95rem}
+  .btn-save{background:var(--brand);color:#fff} .btn-cancel{background:#f1f5f9;color:#475569}
+  .exp-area{width:100%;min-height:150px;font-family:monospace;font-size:.78rem;padding:10px;
+    border:1.5px solid var(--line);border-radius:10px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -98,6 +142,12 @@
     </div>
   </div>
   <div class="chips" id="chips"></div>
+  <div class="editbar">
+    <button class="eb-add" onclick="addApp()">➕ เพิ่มระบบงาน</button>
+    <button class="eb-exp" onclick="exportData()">💾 บันทึก / ส่งออก</button>
+    <button class="eb-reset" onclick="resetData()">↺ คืนค่าเริ่มต้น</button>
+  </div>
+  <div class="editflag">🔓 โหมดแก้ไขเปิดอยู่ — การเปลี่ยนแปลงถูกบันทึกในเครื่องนี้ · กด “บันทึก / ส่งออก” เพื่อเผยแพร่ให้ทุกคน</div>
 </div>
 
 <main class="wrap" id="main"></main>
@@ -107,10 +157,15 @@
   คลิกการ์ดเพื่อเข้าใช้งานแต่ละระบบ — เปิดในแท็บใหม่
 </footer>
 
+<button class="fab" id="fab" onclick="toggleEdit()">✏️ แก้ไข</button>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="sheet" id="sheet"></div>
+</div>
+
 <script>
 // ===== ข้อมูลระบบงานทั้งหมด =====
 // status: ok = ใช้งานได้ | auth = ต้องเจ้าของ authorize ก่อน | local = เครื่องครู
-const APPS = [
+const DEFAULT_APPS = [
   // ── ฐานข้อมูลแกนกลาง ──
   {cat:"core", emoji:"🏛️", name:"ระบบฐานข้อมูลโรงเรียน",
    desc:"ฐานข้อมูลกลางของโรงเรียน — ข้อมูลนักเรียน ผู้ปกครอง ครู รายวิชา ห้องเรียน และคะแนน ระบบอื่นๆ ดึงข้อมูลจากที่นี่",
@@ -180,6 +235,17 @@ const APPS = [
    url:"", tags:["กบข.","การลงทุน"], status:"local"},
 ];
 
+// ── โหมดแก้ไข: รหัสผ่าน + เก็บข้อมูลในเครื่อง (localStorage) ──
+const EDIT_PASS = "@021916103";
+const LS_KEY = "bk_portal_apps_v1";
+function loadApps(){
+  try{ const s = localStorage.getItem(LS_KEY); if(s){ const a = JSON.parse(s); if(Array.isArray(a) && a.length) return a; } }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_APPS));
+}
+let APPS = loadApps();
+let editMode = false;
+function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(APPS)); }catch(e){} }
+
 const CATS = [
   {id:"all",      label:"ทั้งหมด",            ic:"✨"},
   {id:"core",     label:"ฐานข้อมูลกลาง",      ic:"🏛️"},
@@ -208,20 +274,26 @@ function renderChips(){
   el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{activeCat=b.dataset.cat;render();});
 }
 
-function cardHTML(a){
+function cardHTML(a, idx){
   const st = STATUS[a.status]||STATUS.ok;
   const tagB = (a.tags||[]).map(t=>`<span class="badge b-tag">${t}</span>`).join("");
-  const link = a.url
-    ? `<a class="open" href="${a.url}" target="_blank" rel="noopener">เข้าใช้งาน →</a>`
-    : `<span class="open disabled">เปิดในเครื่องครู</span>`;
+  const privB = a.private ? `<span class="badge b-priv">🔒 ส่วนตัว</span>` : "";
+  let link;
+  if(!a.url) link = `<span class="open disabled">เปิดในเครื่องครู</span>`;
+  else if(a.private) link = `<a class="open" href="#" onclick="openPrivate(event,'${encodeURIComponent(a.url)}')">🔒 เข้าใช้งาน →</a>`;
+  else link = `<a class="open" href="${a.url}" target="_blank" rel="noopener">เข้าใช้งาน →</a>`;
   return `<div class="card">
     <div class="top">
       <div class="emoji">${a.emoji}</div>
       <div><h3>${a.name}</h3></div>
     </div>
     <div class="desc">${a.desc}</div>
-    <div class="badges"><span class="badge ${st.cls}">${st.txt}</span>${tagB}</div>
+    <div class="badges"><span class="badge ${st.cls}">${st.txt}</span>${privB}${tagB}</div>
     ${link}
+    <div class="cardedit">
+      <button class="ce-edit" onclick="openEditor(${idx})">✏️ แก้ไข</button>
+      <button class="ce-del" onclick="deleteApp(${idx})">🗑️ ลบ</button>
+    </div>
   </div>`;
 }
 
@@ -238,10 +310,99 @@ function render(){
     total += list.length;
     html += `<section class="cat">
       <div class="cat-head"><span class="ic">${c.ic}</span><h2>${c.label}</h2><span class="count">${list.length} ระบบ</span></div>
-      <div class="grid">${list.map(cardHTML).join("")}</div>
+      <div class="grid">${list.map(a=>cardHTML(a, APPS.indexOf(a))).join("")}</div>
     </section>`;
   });
   main.innerHTML = total ? html : `<div class="empty">ไม่พบระบบงานที่ตรงกับ “${keyword}”</div>`;
+}
+
+// ── การ์ดส่วนตัว: ต้องใส่รหัสก่อนเปิด ──
+function openPrivate(ev, encUrl){
+  ev.preventDefault();
+  const p = prompt("🔒 ระบบนี้ตั้งเป็นส่วนตัว — ใส่รหัสผ่านเพื่อเข้าใช้งาน");
+  if(p === null) return;
+  if(p === EDIT_PASS) window.open(decodeURIComponent(encUrl), "_blank", "noopener");
+  else alert("รหัสผ่านไม่ถูกต้อง");
+}
+
+// ── สลับโหมดแก้ไข (ป้องกันด้วยรหัส) ──
+function toggleEdit(){
+  if(editMode){
+    editMode = false; document.body.classList.remove("editing");
+    document.getElementById("fab").textContent = "✏️ แก้ไข"; render(); return;
+  }
+  const p = prompt("ใส่รหัสผ่านเพื่อเข้าโหมดแก้ไข");
+  if(p === null) return;
+  if(p !== EDIT_PASS){ alert("รหัสผ่านไม่ถูกต้อง"); return; }
+  editMode = true; document.body.classList.add("editing");
+  document.getElementById("fab").textContent = "✓ เสร็จสิ้น"; render();
+}
+
+// ── ฟอร์มเพิ่ม/แก้ไข ──
+function esc(s){ return String(s==null?"":s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function catOptions(sel){ return CATS.filter(c=>c.id!=="all").map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${c.ic} ${c.label}</option>`).join(""); }
+function statusOptions(sel){ return Object.keys(STATUS).map(k=>`<option value="${k}" ${k===sel?'selected':''}>${STATUS[k].txt}</option>`).join(""); }
+
+function openEditor(idx){
+  const a = idx>=0 ? APPS[idx] : {cat:"core",emoji:"🔗",name:"",desc:"",url:"",tags:[],status:"ok",private:false};
+  document.getElementById("sheet").innerHTML = `
+    <h3>${idx>=0?'✏️ แก้ไขระบบงาน':'➕ เพิ่มระบบงานใหม่'}</h3>
+    <div class="fld row">
+      <div style="flex:0 0 84px"><label>ไอคอน</label><input id="f-emoji" value="${esc(a.emoji)}"></div>
+      <div style="flex:1"><label>ชื่อระบบงาน</label><input id="f-name" value="${esc(a.name)}"></div>
+    </div>
+    <div class="fld"><label>คำอธิบาย</label><textarea id="f-desc">${esc(a.desc)}</textarea></div>
+    <div class="fld"><label>ลิงก์ URL (เว้นว่าง = เปิดในเครื่องครู)</label><input id="f-url" value="${esc(a.url)}" placeholder="https://..."></div>
+    <div class="fld row">
+      <div style="flex:1"><label>หมวดหมู่ (ย้ายได้)</label><select id="f-cat">${catOptions(a.cat)}</select></div>
+      <div style="flex:1"><label>สถานะ</label><select id="f-status">${statusOptions(a.status)}</select></div>
+    </div>
+    <div class="fld"><label>แท็ก (คั่นด้วย ,)</label><input id="f-tags" value="${esc((a.tags||[]).join(', '))}"></div>
+    <div class="fld chk"><input type="checkbox" id="f-priv" ${a.private?'checked':''}><label style="margin:0">🔒 ส่วนตัว — ต้องใส่รหัสก่อนเข้าใช้งาน</label></div>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-save" onclick="saveApp(${idx})">บันทึก</button>
+    </div>`;
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("show"); }
+
+function saveApp(idx){
+  const v = id => document.getElementById(id).value.trim();
+  const obj = {
+    cat: v("f-cat"), emoji: v("f-emoji")||"🔗", name: v("f-name")||"(ไม่มีชื่อ)",
+    desc: v("f-desc"), url: v("f-url"), status: v("f-status"),
+    tags: v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),
+    private: document.getElementById("f-priv").checked
+  };
+  if(idx>=0) APPS[idx] = obj; else APPS.push(obj);
+  persist(); closeModal(); render();
+}
+function addApp(){ openEditor(-1); }
+function deleteApp(idx){ if(confirm(`ลบ “${APPS[idx].name}” ?`)){ APPS.splice(idx,1); persist(); render(); } }
+function resetData(){ if(confirm("คืนค่าเริ่มต้นทั้งหมด? (ลบการแก้ไขในเครื่องนี้)")){ localStorage.removeItem(LS_KEY); APPS = loadApps(); render(); } }
+
+// ── ส่งออก: ดาวน์โหลดไฟล์ apps.json เพื่อเผยแพร่ให้ทุกคน ──
+function exportData(){
+  const json = JSON.stringify(APPS, null, 2);
+  document.getElementById("sheet").innerHTML = `
+    <h3>💾 บันทึก / ส่งออกข้อมูล</h3>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:10px;font-family:'Sarabun',sans-serif">
+      ✅ การแก้ไขถูกบันทึกในเครื่องนี้แล้ว (เห็นเฉพาะเบราว์เซอร์นี้)<br>
+      📢 หากต้องการให้ <b>ทุกคนเห็น</b> ให้กด “ดาวน์โหลด” แล้วส่งไฟล์ให้ผู้ดูแลอัปเดตเว็บ (เว็บเป็นแบบ static จึงไม่ซิงก์อัตโนมัติ)
+    </p>
+    <textarea class="exp-area" readonly onclick="this.select()">${esc(json)}</textarea>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">ปิด</button>
+      <button class="btn-save" onclick="downloadJSON()">⬇️ ดาวน์โหลดไฟล์</button>
+    </div>`;
+  document.getElementById("modal").classList.add("show");
+}
+function downloadJSON(){
+  const blob = new Blob([JSON.stringify(APPS, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "bk-portal-apps.json";
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 document.getElementById("q").addEventListener("input", e=>{keyword=e.target.value;render();});
