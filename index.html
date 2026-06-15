@@ -138,6 +138,10 @@
     font-family:'Sarabun',sans-serif;font-size:.96rem;animation:mq 24s linear infinite}
   .mq-track:hover{animation-play-state:paused}
   @keyframes mq{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+  /* แถบปฏิทินโรงเรียน (สีฟ้า) */
+  .calbar{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.45)}
+  .calbar .ico{background:rgba(59,130,246,.92);color:#fff}
+  .calbar .mq-track{color:#bfdbfe;animation-duration:34s}
 
   /* ── โซนใช้บ่อย/งานช่วงนี้ + ริบบิ้น ── */
   .topzone .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
@@ -166,6 +170,10 @@
   <div class="marquee" id="marquee">
     <span class="ico">📢 ประกาศ</span>
     <div class="mq-view"><div class="mq-track" id="mqTrack"></div></div>
+  </div>
+  <div class="marquee calbar" id="calbar">
+    <span class="ico">📅 ปฏิทินโรงเรียน</span>
+    <div class="mq-view"><div class="mq-track" id="calTrack"></div></div>
   </div>
   <div class="toolbar">
     <div class="search">
@@ -435,14 +443,16 @@ function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(APPS)); }ca
 const PORTAL_API = "https://script.google.com/macros/s/AKfycbxLKJkNU_4LdJGHfGEOGFQaKCQ0eSFBfs-y3Q9hNrsZ_N8kc7cYzhO0mRo6cSvM9-EtzA/exec";
 let editPass = "";
 let announce = "";
+let calEvents = [];
 
-// ดึงข้อมูลล่าสุดจากส่วนกลาง (apps + ประกาศ) — เรียกตอนเปิดหน้า
+// ดึงข้อมูลล่าสุดจากส่วนกลาง (apps + ประกาศ + ปฏิทินโรงเรียน) — เรียกตอนเปิดหน้า
 async function fetchApps(){
   try{
     const res = await fetch(PORTAL_API, { cache:"no-store" });
     const j = await res.json();
     if(!j || !j.ok) return;
-    if(editMode) return;               // กำลังแก้อยู่ อย่าทับ
+    if(Array.isArray(j.events)){ calEvents = j.events; renderCalMarquee(); }  // ปฏิทินอัปเดตได้เสมอ
+    if(editMode) return;               // กำลังแก้ apps/ประกาศอยู่ อย่าทับ
     if(typeof j.announce === "string"){ announce = j.announce; renderMarquee(); }
     if(Array.isArray(j.apps) && j.apps.length){ APPS = j.apps; persist(); render(); }
   }catch(e){ /* ออฟไลน์: ใช้ค่าที่แคชไว้ */ }
@@ -476,6 +486,21 @@ function renderMarquee(){
   const track = document.getElementById("mqTrack");
   if(announce && announce.trim()){
     track.textContent = "   " + announce.trim() + "   ";
+    bar.classList.add("show");
+  }else{
+    bar.classList.remove("show");
+  }
+}
+
+// ── แถบปฏิทินโรงเรียน (อัตโนมัติจาก Google Calendar) ──
+function renderCalMarquee(){
+  const bar = document.getElementById("calbar");
+  const track = document.getElementById("calTrack");
+  const today = todayISO();
+  // โชว์งานที่ยังไม่ผ่าน (all-day end เป็นวันถัดไป จึงโชว์ครบทั้งวันงาน)
+  const up = calEvents.filter(e => (e.end || e.date) >= today);
+  if(up.length){
+    track.textContent = "   " + up.map(e => thaiDate(e.date) + " — " + e.title).join("        ✦        ") + "   ";
     bar.classList.add("show");
   }else{
     bar.classList.remove("show");
