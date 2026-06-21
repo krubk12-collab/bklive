@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แจ้งเตือนนิเทศการสอนวันนี้</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:transparent}
+  .bar{display:flex;align-items:center;height:46px;font-family:'Sarabun',sans-serif;
+    color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18);
+    background:linear-gradient(90deg,#b91c1c 0%,#dc2626 45%,#ea580c 100%)}
+  .bar.upcoming{background:linear-gradient(90deg,#b45309 0%,#d97706 50%,#f59e0b 100%)}
+  .bar.none{background:linear-gradient(90deg,#15803d 0%,#16a34a 100%)}
+  .tag{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 14px;height:100%;
+    background:rgba(0,0,0,.20);font-weight:700;white-space:nowrap;font-size:.92rem}
+  .marq{flex:1;overflow:hidden;position:relative;height:100%}
+  .track{position:absolute;left:0;top:0;white-space:nowrap;display:inline-flex;align-items:center;
+    height:100%;will-change:transform;animation:scroll var(--dur,40s) linear infinite}
+  .marq:hover .track{animation-play-state:paused}
+  .item{padding:0 26px;display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem}
+  .item b{font-weight:700}
+  .sep{opacity:.55;font-size:.7rem}
+  .static{padding:0 18px;font-weight:600;font-size:.92rem;white-space:nowrap}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+<div class="bar none" id="bar">
+  <div class="tag" id="tag">📢 นิเทศการสอน</div>
+  <div class="marq" id="marq"><div class="track" id="track"></div></div>
+</div>
+<script>
+const LOG_URL='https://script.google.com/macros/s/AKfycbwR_jmt3cY2cobLlbmn0BgXSaTaKrj4TIVe0z72yr1t6abHZWBNIG1xkTwIoNnnj2rs/exec';
+const ROLE={director:'ผอ.นิเทศ',deputy:'รองฯ นิเทศ',peer:'นิเทศกันเอง'};
+const PT={1:"08:30–09:20",2:"09:20–10:10",3:"10:10–11:00",4:"11:00–11:50",5:"12:50–13:40",6:"13:40–14:30",7:"14:30–15:30",8:"15:30–16:30"};
+const M=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function todayISO(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fmtTH(s){if(!s)return'';const[y,m,d]=String(s).slice(0,10).split('-').map(Number);return d+' '+M[m]+' '+(y+543);}
+
+async function load(){
+  try{
+    const r=await fetch(LOG_URL+'?action=supSummary');
+    const j=await r.json();
+    if(!j||!j.ok){return;}
+    const byDate=j.byDate||{}, today=todayISO();
+    let items=(byDate[today]||[]).slice(), mode='today', dateLabel='';
+    if(!items.length){
+      const next=Object.keys(byDate).filter(d=>d&&d>=today).sort()[0];
+      if(next){items=byDate[next].slice();mode='upcoming';dateLabel=fmtTH(next);}
+      else{mode='none';}
+    }
+    render(items,mode,dateLabel);
+  }catch(e){ render([], 'none', ''); }
+}
+function render(items,mode,dateLabel){
+  const bar=document.getElementById('bar'),tag=document.getElementById('tag'),track=document.getElementById('track');
+  bar.classList.remove('upcoming','none');
+  if(mode==='none' || !items.length){
+    bar.classList.add('none'); tag.innerHTML='✅ นิเทศการสอน';
+    track.innerHTML='<span class="static">ช่วงนี้ยังไม่มีการนิเทศการสอนตามแผน — ขอให้ครูทุกท่านสอนอย่างมีความสุข 😊</span>';
+    track.style.animation='none'; track.style.position='static';
+    return;
+  }
+  track.style.position='absolute';
+  items.sort((a,b)=>a.period-b.period);
+  if(mode==='upcoming'){ bar.classList.add('upcoming'); tag.innerHTML='🔔 นิเทศครั้งถัดไป'; }
+  else { tag.innerHTML='📢 วันนี้มีนิเทศการสอน'; }
+  const prefix = mode==='upcoming'
+    ? '<span class="item"><b>📅 '+esc(dateLabel)+'</b></span><span class="sep">◆</span>' : '';
+  const body = items.map(o=>
+    '<span class="item">👩‍🏫 <b>'+esc(o.supervisee_name)+'</b> รับการนิเทศ · ผู้นิเทศ <b>'+esc(o.supervisor_name)+'</b> ('+(ROLE[o.role]||o.role_th||'')+') · คาบ '+o.period+' '+(PT[o.period]||'')+' · '+esc(o.subject_name)+' '+esc(o.class_name)+'</span><span class="sep">◆</span>'
+  ).join('');
+  const seq = prefix + body;
+  track.innerHTML = seq + seq; // ทำซ้ำ 2 ชุด ให้วนต่อเนื่องไร้รอยต่อ
+  const dur = Math.max(24, items.length*13);
+  track.style.animation = 'scroll '+dur+'s linear infinite';
+}
+load();
+setInterval(load, 10*60*1000); // รีเฟรชทุก 10 นาที
+</script>
+</body>
+</html>
