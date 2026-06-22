@@ -39,10 +39,9 @@ const BANDS={
   p46:{ url:'https://script.google.com/macros/s/AKfycbxeJ5ogM_8wJZTD_CUwj45ZEzq97ISpntujuEuDQvesv4q4YOxnSuopg5MUnNWwADLaVQ/exec',
         pt:{2:"08:30–09:30",3:"09:30–10:30",4:"10:30–11:30",5:"12:30–13:30",6:"13:30–14:30",7:"14:30–15:30"} },
 };
-const C=BANDS[BAND]||BANDS.sec;
-const LOG_URL=C.url;
 const ROLE={director:'ผอ.นิเทศ',deputy:'รองฯ นิเทศ',peer:'นิเทศกันเอง'};
-const PT=C.pt;
+// ?band=all → รวมทุกช่วงชั้น (ใช้บน Dashboard ภาพรวมทั้งโรงเรียน)
+function bandKeys(){ if(BAND==='all') return ['sec','p46']; return [BANDS[BAND]?BAND:'sec']; }
 const M=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function todayISO(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -50,14 +49,23 @@ function fmtTH(s){if(!s)return'';const[y,m,d]=String(s).slice(0,10).split('-').m
 
 async function load(){
   try{
-    const r=await fetch(LOG_URL+'?action=supSummary');
-    const j=await r.json();
-    if(!j||!j.ok){return;}
-    const byDate=j.byDate||{}, today=todayISO();
-    let items=(byDate[today]||[]).slice(), mode='today', dateLabel='';
+    const today=todayISO(), merged={};
+    for(const k of bandKeys()){
+      const b=BANDS[k];
+      try{
+        const r=await fetch(b.url+'?action=supSummary');
+        const j=await r.json();
+        if(!j||!j.ok) continue;
+        const bd=j.byDate||{};
+        Object.keys(bd).forEach(d=>{
+          (bd[d]||[]).forEach(o=>{ o._time=b.pt[o.period]||''; (merged[d]=merged[d]||[]).push(o); });
+        });
+      }catch(e){}
+    }
+    let items=(merged[today]||[]).slice(), mode='today', dateLabel='';
     if(!items.length){
-      const next=Object.keys(byDate).filter(d=>d&&d>=today).sort()[0];
-      if(next){items=byDate[next].slice();mode='upcoming';dateLabel=fmtTH(next);}
+      const next=Object.keys(merged).filter(d=>d&&d>=today).sort()[0];
+      if(next){items=merged[next].slice();mode='upcoming';dateLabel=fmtTH(next);}
       else{mode='none';}
     }
     render(items,mode,dateLabel);
@@ -79,7 +87,7 @@ function render(items,mode,dateLabel){
   const prefix = mode==='upcoming'
     ? '<span class="item"><b>📅 '+esc(dateLabel)+'</b></span><span class="sep">◆</span>' : '';
   const body = items.map(o=>
-    '<span class="item">👩‍🏫 <b>'+esc(o.supervisee_name)+'</b> รับการนิเทศ · ผู้นิเทศ <b>'+esc(o.supervisor_name)+'</b> ('+(ROLE[o.role]||o.role_th||'')+') · คาบ '+o.period+' '+(PT[o.period]||'')+' · '+esc(o.subject_name)+' '+esc(o.class_name)+'</span><span class="sep">◆</span>'
+    '<span class="item">👩‍🏫 <b>'+esc(o.supervisee_name)+'</b> รับการนิเทศ · ผู้นิเทศ <b>'+esc(o.supervisor_name)+'</b> ('+(ROLE[o.role]||o.role_th||'')+') · คาบ '+o.period+' '+(o._time||'')+' · '+esc(o.subject_name)+' '+esc(o.class_name)+'</span><span class="sep">◆</span>'
   ).join('');
   const seq = prefix + body;
   track.innerHTML = seq + seq; // ทำซ้ำ 2 ชุด ให้วนต่อเนื่องไร้รอยต่อ
