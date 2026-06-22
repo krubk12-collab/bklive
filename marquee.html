@@ -31,9 +31,18 @@
   <div class="marq" id="marq"><div class="track" id="track"></div></div>
 </div>
 <script>
-const LOG_URL='https://script.google.com/macros/s/AKfycbwR_jmt3cY2cobLlbmn0BgXSaTaKrj4TIVe0z72yr1t6abHZWBNIG1xkTwIoNnnj2rs/exec';
+// เลือกช่วงชั้นด้วย ?band=  (default = มัธยม) → ดึงข้อมูลนิเทศคนละ GAS + เวลาคาบต่างกัน
+const BAND=(new URLSearchParams(location.search).get('band')||'').toLowerCase();
+const BANDS={
+  sec:{ url:'https://script.google.com/macros/s/AKfycbwR_jmt3cY2cobLlbmn0BgXSaTaKrj4TIVe0z72yr1t6abHZWBNIG1xkTwIoNnnj2rs/exec',
+        pt:{1:"08:30–09:20",2:"09:20–10:10",3:"10:10–11:00",4:"11:00–11:50",5:"12:50–13:40",6:"13:40–14:30",7:"14:30–15:30",8:"15:30–16:30"} },
+  p46:{ url:'https://script.google.com/macros/s/AKfycbxeJ5ogM_8wJZTD_CUwj45ZEzq97ISpntujuEuDQvesv4q4YOxnSuopg5MUnNWwADLaVQ/exec',
+        pt:{2:"08:30–09:30",3:"09:30–10:30",4:"10:30–11:30",5:"12:30–13:30",6:"13:30–14:30",7:"14:30–15:30"} },
+};
+const C=BANDS[BAND]||BANDS.sec;
+const LOG_URL=C.url;
 const ROLE={director:'ผอ.นิเทศ',deputy:'รองฯ นิเทศ',peer:'นิเทศกันเอง'};
-const PT={1:"08:30–09:20",2:"09:20–10:10",3:"10:10–11:00",4:"11:00–11:50",5:"12:50–13:40",6:"13:40–14:30",7:"14:30–15:30",8:"15:30–16:30"};
+const PT=C.pt;
 const M=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function todayISO(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Bangkok'}));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
