@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คู่มือระบบเช็คสถิติ — โรงเรียนชุมชนวัดบางโค</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --teal:#0f766e; --teal-d:#0b5851; --ink:#1f2937; --soft:#6b7280;
+         --line:#e5e7eb; --bg:#f1f5f9; --card:#fff; --warn:#b45309; --red:#991b1b; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Sarabun',sans-serif;color:var(--ink);background:var(--bg);
+       line-height:1.7;font-size:17px}
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px 80px}
+  header{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;
+         padding:34px 16px;text-align:center;margin-bottom:24px}
+  header h1{margin:0 0 6px;font-size:1.7rem;font-weight:700}
+  header p{margin:0;opacity:.9;font-size:.95rem}
+  h2{color:var(--teal);font-size:1.3rem;margin:30px 0 12px;padding-bottom:8px;
+     border-bottom:2px solid var(--line)}
+  h3{color:var(--teal-d);font-size:1.08rem;margin:20px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:18px 20px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.95rem;overflow:hidden;
+        border-radius:10px}
+  th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  th{background:#ecfdf5;color:var(--teal-d);font-weight:600}
+  tr:nth-child(even) td{background:#fafafa}
+  pre{background:#0f172a;color:#cbd5e1;padding:16px;border-radius:12px;overflow:auto;
+      font-size:.82rem;line-height:1.5}
+  .tag{display:inline-block;background:#ecfdf5;color:var(--teal-d);border:1px solid #a7f3d0;
+       border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:600;margin:2px}
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;
+        color:var(--warn);font-size:.92rem;margin:12px 0}
+  .ok{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:12px 14px;
+      color:var(--teal-d);font-size:.92rem;margin:12px 0}
+  .faq b{color:var(--teal-d)}
+  ol,ul{padding-left:22px}
+  .toc a{color:var(--teal);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  footer{text-align:center;color:var(--soft);font-size:.85rem;margin-top:40px}
+  .btnname{background:#fee2e2;color:var(--red);border-radius:6px;padding:1px 7px;font-weight:600;
+           white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 คู่มือระบบเช็คสถิติ</h1>
+  <p>โรงเรียนชุมชนวัดบางโค · ปรับปรุง 26 มิ.ย. 2569 · สำหรับครูและผู้ดูแลระบบ</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card toc">
+    <b>สารบัญ</b>
+    <ol>
+      <li><a href="#s1">ระบบเช็คสถิติมี 2 ส่วน</a></li>
+      <li><a href="#s2">แท็บสถิติในแอป — โหลดจากไหน ใช้เวลาเท่าไร</a></li>
+      <li><a href="#s3">ชั้นแคช (ทำไมบางทีต้องรีเฟรช)</a></li>
+      <li><a href="#s4">ชีต "เช็คครู / สถิติรวม"</a></li>
+      <li><a href="#s5">แผนภาพการไหลของข้อมูล</a></li>
+      <li><a href="#s6">คำถามที่พบบ่อย</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1">1. ระบบเช็คสถิติมี 2 ส่วน (อย่าสับสน)</h2>
+  <div class="card">
+  <table>
+    <tr><th>ส่วน</th><th>อยู่ที่ไหน</th><th>อัปเดตเมื่อ</th></tr>
+    <tr><td><b>A. แท็บสถิติในแอป</b></td><td>ในแอปเช็คชื่อ (ฝังที่เว็บ bk2)</td><td>เปิด/รีเฟรชแล้วดึงทันที (สด)</td></tr>
+    <tr><td><b>B. ชีต "เช็คครู"</b></td><td>Google Sheet แยก (ฝัง bk2)</td><td>อัตโนมัติ ทุกชั่วโมง จ–ศ</td></tr>
+  </table>
+  <div class="ok">ทั้ง 2 ส่วนดึงตัวเลขจาก backend ตัวเดียวกัน → ตัวเลขตรงกันเสมอ ต่างกันแค่ "ความสด" (A สดตลอด, B เป็นรอบ)</div>
+  </div>
+
+  <h2 id="s2">2. แท็บสถิติในแอป</h2>
+  <div class="card">
+  <p>ในแอปมีแท็บที่เป็น "สถิติ" 3 แท็บ:</p>
+  <table>
+    <tr><th>แท็บ</th><th>แหล่งข้อมูล</th><th>แคช</th></tr>
+    <tr><td>🏫 ดูตารางสถิติรวม/เช็คครู</td><td>ห้อง, ลงทะเบียน, นักเรียน, การเช็คชื่อ, ครู</td><td>ภาพรวม 5 นาที / รายงานครู 60 วินาที</td></tr>
+    <tr><td>📊 รายห้อง</td><td>ลงทะเบียน, นักเรียน, การเช็คชื่อ</td><td>ไม่มี (สดเสมอ)</td></tr>
+    <tr><td>👤 รายคน</td><td>นักเรียน, ลงทะเบียน, ประวัติหลายเดือน</td><td>ไม่มี (สดเสมอ)</td></tr>
+  </table>
+
+  <h3>2.1 เปิดแท็บ "ดูตารางสถิติรวม/เช็คครู" — โหลดจากไหน?</h3>
+  <pre>เปิดแท็บ
+  ├─ ภาพรวมการมาเรียน → อ่านสดจาก Google Sheet
+  │     (ห้อง + ลงทะเบียน + นักเรียน + การเช็คชื่อวันนั้น)
+  │     แล้วเก็บผลไว้ 5 นาที ให้คนถัดไปเปิดเร็วขึ้น
+  │
+  └─ ตารางเช็คครู → อ่านสด (ครู + ห้อง + สถิติวันนั้น)
+        เก็บผลไว้ 60 วินาที</pre>
+  <div class="ok">สถิติ <b>อ่านสดจาก Google Sheet โดยตรง</b> (ไม่ได้ใช้แคชรายชื่อแบบหน้าเช็คชื่อ) จึง "สด" กว่า เพียงเก็บผลไว้ชั่วคราวเพื่อความเร็ว</div>
+
+  <h3>2.2 กด "รีเฟรช" ดึงจากไหน?</h3>
+  <table>
+    <tr><th>การกระทำ</th><th>ผล</th></tr>
+    <tr><td><span class="btnname">🔄 รีเฟรชสถิติ</span></td><td><b>ข้ามแคชทุกชั้น</b> ดึงสดจากชีตทันที (ช้าหน่อยแต่ได้ของจริง 100%)</td></tr>
+    <tr><td>ปุ่ม "วันนี้"</td><td>เรียกใหม่ — อาจคืนผลแคช (ภาพรวม ≤5 นาที / รายงานครู ≤60 วิ)</td></tr>
+    <tr><td>ลูกศร ‹ / › เปลี่ยนวัน</td><td>ดึงข้อมูลของวันใหม่</td></tr>
+    <tr><td>สลับแท็บไปกลับ</td><td>ไม่ดึงใหม่ถ้าวันเดิม — ต้องกด "วันนี้" หรือ "รีเฟรชสถิติ"</td></tr>
+  </table>
+  <div class="ok">ทุกครั้งที่มีคน <b>บันทึกเช็คชื่อนักเรียน/ครูของวันนั้น</b> ระบบจะล้างแคชให้อัตโนมัติ → สถิติสดทันทีโดยไม่ต้องกดรีเฟรช</div>
+
+  <h3>2.3 ใช้เวลาดึงข้อมูลเท่าไร? (วัดจริง)</h3>
+  <table>
+    <tr><th>สถานการณ์</th><th>เวลาโดยประมาณ</th></tr>
+    <tr><td>เปิดครั้งแรกของช่วง (ดึงสด)</td><td>~7–8 วินาที</td></tr>
+    <tr><td>เปิดซ้ำภายใน 1 นาที (โดนแคช)</td><td><b>~2–3 วินาที</b></td></tr>
+    <tr><td>กดปุ่ม "🔄 รีเฟรชสถิติ" (บังคับดึงสด)</td><td>~7–8 วินาที (ได้เลขตรงชีต 100%)</td></tr>
+  </table>
+  <div class="note">⏱️ เวลานี้รวมเครือข่ายแล้ว บนเน็ตโรงเรียนอาจ ±2–3 วินาที · เดิมตารางเช็คครูช้า ~8 วิทุกครั้ง ตอนนี้ใส่แคชแล้วเหลือ ~2 วิ</div>
+  </div>
+
+  <h2 id="s3">3. ชั้นแคช — ทำไมบางทีต้องรีเฟรช</h2>
+  <div class="card">
+  <table>
+    <tr><th>ชั้นแคช</th><th>อายุ</th><th>ล้างเมื่อ</th></tr>
+    <tr><td>ภาพรวมการมาเรียน</td><td>5 นาที</td><td>หมดอายุ / บันทึกเช็คชื่อ / ปุ่มรีเฟรช</td></tr>
+    <tr><td>รายงานเช็คครู</td><td>60 วินาที</td><td>หมดอายุ / บันทึกเช็คชื่อ / ปุ่มรีเฟรช</td></tr>
+    <tr><td>รายชื่อนักเรียน (roster)</td><td>30 นาที</td><td>แก้ผ่านแอป (อัตโนมัติ) / ปุ่ม "🧹 ดึงข้อมูลจริง"</td></tr>
+  </table>
+  <p><b>ทำไมต้องมีแคช?</b> เพื่อให้เปิดเร็ว ระบบจะ "จำ" ข้อมูลไว้ชั่วคราว ปกติเมื่อมีการบันทึกเช็คชื่อ ระบบจะล้างแคชและอัปเดตให้เอง</p>
+  <div class="note">⚠️ ถ้าไปแก้ข้อมูลใน Google Sheet <b>โดยตรง</b> แล้วแอปยังเห็นของเก่า ให้กด <span class="btnname">🔄 รีเฟรชสถิติ</span> (ในแท็บสถิติ) หรือ <span class="btnname">🧹 ดึงข้อมูลจริง</span> (หน้าเช็คชื่อ) เพื่อบังคับดึงของล่าสุด</div>
+  </div>
+
+  <h2 id="s4">4. ชีต "เช็คครู / สถิติรวม" (อัปเดตอัตโนมัติ)</h2>
+  <div class="card">
+  <p>เป็น Google Sheet แยก ฝังที่ bk2 ใช้ดู/พิมพ์เป็นเอกสารราชการ ระบบจะดึงตัวเลขจาก backend มาเทลงตารางให้อัตโนมัติ:</p>
+  <table>
+    <tr><th>เมื่อไหร่</th><th>ทำอะไร</th></tr>
+    <tr><td>ทุกชั่วโมง จ–ศ</td><td>ดึงข้อมูลวันนี้ลงชีต (แท็บหลัก)</td></tr>
+    <tr><td>ช่วง 16:00–17:00 จ–ศ</td><td>ก๊อปปี้แท็บปิดวัน เก็บเป็นวันที่</td></tr>
+    <tr><td>วันที่ 1 ของเดือน</td><td>ย้ายแท็บเดือนเก่าไปไฟล์ archive</td></tr>
+  </table>
+  <div class="note">ตัวเลขในชีตนี้คือ "ภาพถ่าย ณ รอบ sync ล่าสุด" ไม่ใช่สด — ถ้าเพิ่งแก้ข้อมูล ให้รอรอบชั่วโมงถัดไป</div>
+  </div>
+
+  <h2 id="s5">5. แผนภาพการไหลของข้อมูล</h2>
+  <div class="card">
+  <pre>     แหล่งความจริง (Google Sheets)
+     MASTER: นักเรียน / ครู / ห้อง
+     YEARLY: ลงทะเบียน / การเช็คชื่อรายเดือน
+                  │  อ่านสด
+                  ▼
+        Backend (Google Apps Script)
+        + แคชชั่วคราว เพื่อความเร็ว
+            │                    │
+   (อ่านสดทุกครั้ง)        (ดึงเป็นรอบ ทุกชั่วโมง)
+            ▼                    ▼
+   A. แท็บสถิติในแอป      B. ชีตเช็คครู/สถิติรวม
+   (สด, มีแคชสั้น)        (sync รายชั่วโมง จ–ศ)</pre>
+  </div>
+
+  <h2 id="s6">6. คำถามที่พบบ่อย</h2>
+  <div class="card faq">
+    <p><b>ถาม: แก้ข้อมูลแล้ว สถิติยังเป็นเลขเก่า?</b><br>
+    ตอบ: กดปุ่ม "🔄 รีเฟรชสถิติ" (บังคับดึงสด) หรือบันทึกเช็คชื่อของวันนั้น 1 ครั้ง</p>
+    <p><b>ถาม: เปิดสถิติช้า 7–8 วินาที ปกติไหม?</b><br>
+    ตอบ: ปกติเฉพาะครั้งแรกของช่วง ครั้งถัดไปเร็วขึ้นเหลือ ~2–3 วินาที</p>
+    <p><b>ถาม: ชีต "เช็คครู" ไม่ตรงกับในแอป?</b><br>
+    ตอบ: ชีตอัปเดตเป็นรอบ (ทุกชั่วโมง) ส่วนแอปสด → รอรอบถัดไป</p>
+    <p><b>ถาม: อัปเดตแล้วยังเห็นหน้าเดิมบนเว็บ?</b><br>
+    ตอบ: กด Ctrl+F5 เพื่อรีเฟรชหน้าเว็บแบบล้างแคชเบราว์เซอร์</p>
+  </div>
+
+  <footer>จัดทำโดยทีมดูแลระบบสารสนเทศ โรงเรียนชุมชนวัดบางโค</footer>
+
+</div>
+</body>
+</html>
