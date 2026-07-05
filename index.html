@@ -89,7 +89,7 @@
   }
 
   /* ── ปุ่ม/โหมดแก้ไข ── */
-  .fab{position:fixed;right:18px;bottom:18px;z-index:40;border:none;cursor:pointer;
+  .fab{position:fixed;right:18px;bottom:54px;z-index:40;border:none;cursor:pointer;
     background:var(--brand);color:#fff;border-radius:999px;padding:13px 18px;font-family:inherit;
     font-weight:600;font-size:.95rem;box-shadow:0 8px 24px rgba(37,99,235,.4)}
   .fab:hover{background:#1d4ed8}
@@ -131,7 +131,7 @@
   .btn-save{background:var(--brand);color:#fff} .btn-cancel{background:#f1f5f9;color:#475569}
   .exp-area{width:100%;min-height:150px;font-family:monospace;font-size:.78rem;padding:10px;
     border:1.5px solid var(--line);border-radius:10px;margin-bottom:10px}
-  .toast{position:fixed;left:50%;bottom:24px;z-index:80;
+  .toast{position:fixed;left:50%;bottom:56px;z-index:80;
     background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-family:'Sarabun',sans-serif;
     font-size:.92rem;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;
     transition:.25s;transform:translateX(-50%) translateY(20px);max-width:90vw;text-align:center}
@@ -149,9 +149,11 @@
   .mq-track:hover{animation-play-state:paused}
   @keyframes mq{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
   /* แถบปฏิทินโรงเรียน (สีฟ้า) */
-  .calbar{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.45)}
-  .calbar .ico{background:rgba(59,130,246,.92);color:#fff}
-  .calbar .mq-track{color:#bfdbfe;animation-duration:34s}
+  .calbar{background:#0f2647;border:0;border-radius:0;max-width:none;margin:0;
+    position:fixed;left:0;bottom:0;width:100%;z-index:900;box-shadow:0 -4px 16px rgba(0,0,0,.25)}
+  .calbar .ico{background:rgba(59,130,246,.92);color:#fff;padding:6px 10px;font-size:.8rem}
+  .calbar .mq-track{color:#bfdbfe;animation-duration:34s;padding:6px 0;font-size:.86rem}
+  body.has-calbar{padding-bottom:32px}
 
   /* ── โซนใช้บ่อย/งานช่วงนี้ + ริบบิ้น ── */
   .topzone .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
@@ -191,10 +193,6 @@
   <div class="marquee" id="marquee">
     <span class="ico">📢 ประกาศ</span>
     <div class="mq-view"><div class="mq-track" id="mqTrack"></div></div>
-  </div>
-  <div class="marquee calbar" id="calbar">
-    <span class="ico">📅</span>
-    <div class="mq-view"><div class="mq-track" id="calTrack"></div></div>
   </div>
   <div class="toolbar">
     <div class="search">
@@ -524,8 +522,10 @@ function renderCalMarquee(){
   if(up.length){
     track.textContent = "   " + up.map(e => thaiDate(e.date) + " — " + e.title).join("        ✦        ") + "   ";
     bar.classList.add("show");
+    document.body.classList.add("has-calbar");
   }else{
     bar.classList.remove("show");
+    document.body.classList.remove("has-calbar");
   }
 }
 function openAnnounceEditor(){
@@ -828,5 +828,9 @@ tick(); setInterval(tick,1000);
 render();
 fetchApps();   // ดึงรายการล่าสุดจากส่วนกลางทับค่าเริ่มต้น
 </script>
+<div class="marquee calbar" id="calbar">
+  <span class="ico">📅</span>
+  <div class="mq-view"><div class="mq-track" id="calTrack"></div></div>
+</div>
 </body>
 </html>
