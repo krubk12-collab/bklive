@@ -147,7 +147,7 @@
   .mq-track{display:inline-block;white-space:nowrap;padding:9px 0;color:#fde68a;
     font-family:'Sarabun',sans-serif;font-size:.96rem;animation:mq 24s linear infinite}
   .mq-track:hover{animation-play-state:paused}
-  @keyframes mq{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+  @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   /* แถบปฏิทินโรงเรียน (สีฟ้า) */
   .calbar{background:#0f2647;border:0;border-radius:0;max-width:none;margin:0;
     position:fixed;left:0;bottom:0;width:100%;z-index:900;box-shadow:0 -4px 16px rgba(0,0,0,.25)}
@@ -505,7 +505,8 @@ function renderMarquee(){
   const bar = document.getElementById("marquee");
   const track = document.getElementById("mqTrack");
   if(announce && announce.trim()){
-    track.textContent = "   " + announce.trim() + "   ";
+    const t = "   " + announce.trim() + "   ";
+    track.textContent = t + t; // ทำซ้ำ 2 ชุด คู่กับ @keyframes mq (translateX 0→-50%) ให้วิ่งต่อเนื่องไม่มีจังหวะหาย
     bar.classList.add("show");
   }else{
     bar.classList.remove("show");
@@ -520,7 +521,8 @@ function renderCalMarquee(){
   // โชว์งานที่ยังไม่ผ่าน (all-day end เป็นวันถัดไป จึงโชว์ครบทั้งวันงาน)
   const up = calEvents.filter(e => (e.end || e.date) >= today);
   if(up.length){
-    track.textContent = "   " + up.map(e => thaiDate(e.date) + " — " + e.title).join("        ✦        ") + "   ";
+    const t = "   " + up.map(e => thaiDate(e.date) + " — " + e.title).join("        ✦        ") + "   ";
+    track.textContent = t + t; // ทำซ้ำ 2 ชุด คู่กับ @keyframes mq (translateX 0→-50%) ให้วิ่งต่อเนื่องไม่มีจังหวะหาย
     bar.classList.add("show");
     document.body.classList.add("has-calbar");
   }else{
