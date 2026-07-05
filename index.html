@@ -153,6 +153,15 @@
   .ribbon.pin{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
   .ribbon .left{font-weight:700}
   .eb-ann{background:#fff;color:#b45309}
+  .eb-cal{background:#fff;color:#1d4ed8}
+  .cal-list{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:2px;margin-bottom:12px;
+    border:1.5px solid var(--line);border-radius:10px;padding:6px}
+  .cal-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:8px;font-family:'Sarabun',sans-serif}
+  .cal-row:hover{background:#f8fafc}
+  .cal-row input{width:auto;flex-shrink:0}
+  .cal-row .d{color:var(--muted);font-size:.82rem;flex-shrink:0;min-width:74px}
+  .cal-row .t{font-size:.92rem}
+  .cal-empty{color:var(--muted);text-align:center;padding:20px;font-family:'Sarabun',sans-serif;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -174,7 +183,7 @@
     <div class="mq-view"><div class="mq-track" id="mqTrack"></div></div>
   </div>
   <div class="marquee calbar" id="calbar">
-    <span class="ico">📅 ปฏิทินโรงเรียน</span>
+    <span class="ico">📅 ปฏิทินนัดหมาย</span>
     <div class="mq-view"><div class="mq-track" id="calTrack"></div></div>
   </div>
   <div class="toolbar">
@@ -187,6 +196,7 @@
   <div class="editbar">
     <button class="eb-add" onclick="addApp()">➕ เพิ่มระบบงาน</button>
     <button class="eb-ann" onclick="openAnnounceEditor()">📢 ประกาศวิ่ง</button>
+    <button class="eb-cal" onclick="openCalEditor()">🗓️ จัดการปฏิทิน</button>
     <button class="eb-exp" onclick="exportData()">💾 สำรองข้อมูล</button>
     <button class="eb-reset" onclick="resetData()">↺ คืนค่าเริ่มต้น</button>
   </div>
@@ -534,6 +544,50 @@ async function pushAnnounce(){
     if(!j.ok) throw new Error(j.error||"ไม่ทราบสาเหตุ");
     toast("✓ บันทึกประกาศแล้ว — ทุกคนเห็นทันที");
   }catch(e){ toast("⚠️ บันทึกประกาศไม่สำเร็จ ("+e.message+")"); }
+}
+
+// ── จัดการปฏิทิน: เลือกรายการที่จะให้วิ่งแสดง/ซ่อน (เผื่อบันทึกส่วนตัวปนมา) ──
+async function openCalEditor(){
+  if(!editPass){ toast("⚠️ ต้องเข้าโหมดแก้ไขก่อน"); return; }
+  document.getElementById("sheet").innerHTML = `
+    <h3>🗓️ จัดการปฏิทิน</h3>
+    <p style="font-size:.86rem;color:var(--muted);margin-bottom:10px;font-family:'Sarabun',sans-serif">เลือกรายการที่จะให้วิ่งแสดงในแถบปฏิทิน (60 วันข้างหน้า) — ติ๊กออกเพื่อซ่อนรายการที่เป็นบันทึกส่วนตัว ค่าเริ่มต้นแสดงทั้งหมด</p>
+    <div class="cal-list" id="calList"><div class="cal-empty">กำลังโหลด...</div></div>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-save" onclick="saveHiddenCal()">บันทึก</button>
+    </div>`;
+  document.getElementById("modal").classList.add("show");
+  try{
+    const res = await fetch(PORTAL_API + "?action=calAdmin&pass=" + encodeURIComponent(editPass), { cache:"no-store" });
+    const j = await res.json();
+    if(!j.ok) throw new Error(j.error || "โหลดไม่สำเร็จ");
+    const list = document.getElementById("calList");
+    if(!j.events.length){ list.innerHTML = '<div class="cal-empty">ไม่มีนัดหมายใน 60 วันข้างหน้า</div>'; return; }
+    list.innerHTML = j.events.map(ev => `
+      <label class="cal-row">
+        <input type="checkbox" data-id="${esc(ev.id)}" ${ev.hidden ? "" : "checked"}>
+        <span class="d">${thaiDate(ev.date)}</span>
+        <span class="t">${esc(ev.title)}</span>
+      </label>`).join("");
+  }catch(e){
+    document.getElementById("calList").innerHTML = '<div class="cal-empty">⚠️ โหลดไม่สำเร็จ ('+esc(e.message)+')</div>';
+  }
+}
+async function saveHiddenCal(){
+  const rows = document.querySelectorAll("#calList input[type=checkbox]");
+  const hiddenCal = Array.from(rows).filter(r => !r.checked).map(r => r.dataset.id);
+  try{
+    const fd = new FormData();
+    fd.append("pass", editPass);
+    fd.append("hiddenCal", JSON.stringify(hiddenCal));
+    const res = await fetch(PORTAL_API, { method:"POST", body: fd });
+    const j = await res.json();
+    if(!j.ok) throw new Error(j.error || "ไม่ทราบสาเหตุ");
+    toast("✓ บันทึกการตั้งค่าปฏิทินแล้ว");
+    closeModal();
+    fetchApps();
+  }catch(e){ toast("⚠️ บันทึกไม่สำเร็จ ("+e.message+")"); }
 }
 
 // ── วันที่ / โซนใช้บ่อย & งานช่วงนี้ ──
