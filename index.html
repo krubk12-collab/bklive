@@ -76,6 +76,16 @@
   @media(max-width:560px){
     header h1{font-size:1.45rem}
     .grid{grid-template-columns:1fr}
+    .marquee .ico{padding:8px 10px;font-size:.85rem}
+    .mq-track{padding:8px 0;font-size:.92rem}
+    .editbar button{padding:8px 12px;font-size:.85rem}
+    .modal{padding:16px 8px}
+    .sheet{padding:16px;border-radius:14px;max-height:calc(100vh - 32px);overflow:auto}
+    .cal-list{max-height:min(300px,55vh)}
+    .cal-row{flex-wrap:wrap;padding:10px 6px}
+    .cal-row input{width:20px;height:20px}
+    .cal-row .d{order:2}
+    .cal-row .t{order:3;flex:1 1 100%;margin-left:30px}
   }
 
   /* ── ปุ่ม/โหมดแก้ไข ── */
@@ -183,7 +193,7 @@
     <div class="mq-view"><div class="mq-track" id="mqTrack"></div></div>
   </div>
   <div class="marquee calbar" id="calbar">
-    <span class="ico">📅 ปฏิทินนัดหมาย</span>
+    <span class="ico">📅</span>
     <div class="mq-view"><div class="mq-track" id="calTrack"></div></div>
   </div>
   <div class="toolbar">
