@@ -18,6 +18,15 @@
     background:linear-gradient(180deg,#0f172a 0%,#1e3a5f 100%);min-height:100vh}
   .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
 
+  /* ── พื้นหลัง Matrix rain (0/1 ไหลลงมาแบบฝน) — z-index ติดลบ วาดอยู่หลังเนื้อหาปกติเสมอ ── */
+  #matrixBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;opacity:.5}
+
+  /* ── ป้าย "ใหม่" กระพริบ ── */
+  .b-new{background:#052e1a;color:#4ade80;border:1px solid #22c55e;font-weight:700;
+    animation:newBlink 1.4s ease-in-out infinite}
+  @keyframes newBlink{0%,100%{opacity:1;box-shadow:0 0 0 rgba(74,222,128,.6)}
+    50%{opacity:.55;box-shadow:0 0 10px rgba(74,222,128,.6)}}
+
   header{padding:34px 0 26px;text-align:center;color:#fff}
   .logo{width:78px;height:78px;border-radius:20px;object-fit:contain;background:#fff;
     padding:8px;box-shadow:0 8px 30px rgba(0,0,0,.3);margin-bottom:14px}
@@ -177,6 +186,7 @@
 </style>
 </head>
 <body>
+<canvas id="matrixBg"></canvas>
 <iframe src="marquee.html?band=all" title="แจ้งเตือนนิเทศการสอนวันนี้ (ทุกช่วงชั้น)" scrolling="no"
   style="display:block;width:100%;height:46px;border:0;position:sticky;top:0;z-index:1000"></iframe>
 <header>
@@ -660,6 +670,7 @@ function cardHTML(a, idx){
   const st = STATUS[a.status]||STATUS.ok;
   const tagB = (a.tags||[]).map(t=>`<span class="badge b-tag">${t}</span>`).join("");
   const privB = a.private ? `<span class="badge b-priv">🔒 ส่วนตัว</span>` : "";
+  const newB = a.new ? `<span class="badge b-new">🆕 ใหม่</span>` : "";
   let link;
   if(!a.url) link = `<span class="open disabled">เปิดในเครื่องครู</span>`;
   else if(a.private) link = `<a class="open" href="#" onclick="openPrivate(event,'${encodeURIComponent(a.url)}')">🔒 เข้าใช้งาน →</a>`;
@@ -671,7 +682,7 @@ function cardHTML(a, idx){
       <div><h3>${a.name}</h3></div>
     </div>
     <div class="desc">${a.desc}</div>
-    <div class="badges"><span class="badge ${st.cls}">${st.txt}</span>${privB}${tagB}</div>
+    <div class="badges"><span class="badge ${st.cls}">${st.txt}</span>${newB}${privB}${tagB}</div>
     ${link}
     <div class="cardedit">
       <button class="ce-edit" onclick="openEditor(${idx})">✏️ แก้ไข</button>
@@ -758,6 +769,7 @@ function openEditor(idx){
     <div class="fld"><label>แท็ก (คั่นด้วย ,)</label><input id="f-tags" value="${esc((a.tags||[]).join(', '))}"></div>
     <div class="fld chk"><input type="checkbox" id="f-priv" ${a.private?'checked':''}><label style="margin:0">🔒 ส่วนตัว — ต้องใส่รหัสก่อนเข้าใช้งาน</label></div>
     <div class="fld chk"><input type="checkbox" id="f-pin" ${a.pin?'checked':''}><label style="margin:0">📌 ปักหมุดขึ้นโซนบนสุด (ใช้บ่อย / งานประจำ)</label></div>
+    <div class="fld chk"><input type="checkbox" id="f-new" ${a.new?'checked':''}><label style="margin:0">🆕 ทำเครื่องหมายว่าเป็นระบบใหม่ (ป้ายกระพริบ)</label></div>
     <div class="fld" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px">
       <label style="color:#c2410c">🔥 งานช่วงนี้ (ไม่บังคับ) — ขึ้นโซนบน แล้วหายเองเมื่อพ้นวันสิ้นสุด</label>
       <input id="f-task" value="${esc(a.task?a.task.label:'')}" placeholder="ชื่องาน เช่น นิเทศการสอน" style="margin-bottom:8px">
@@ -781,7 +793,8 @@ function saveApp(idx){
     desc: v("f-desc"), url: v("f-url"), status: v("f-status"),
     tags: v("f-tags").split(",").map(s=>s.trim()).filter(Boolean),
     private: document.getElementById("f-priv").checked,
-    pin: document.getElementById("f-pin").checked
+    pin: document.getElementById("f-pin").checked,
+    new: document.getElementById("f-new").checked
   };
   const tEnd = document.getElementById("f-end").value;
   if(tEnd){ obj.task = { label: v("f-task"), start: document.getElementById("f-start").value, end: tEnd }; }
@@ -829,6 +842,43 @@ function tick(){
 tick(); setInterval(tick,1000);
 render();
 fetchApps();   // ดึงรายการล่าสุดจากส่วนกลางทับค่าเริ่มต้น
+
+// ── พื้นหลัง Matrix rain (เลข 0/1 ไหลลงมาแบบฝน) ──
+(function initMatrixRain(){
+  const canvas = document.getElementById("matrixBg");
+  const ctx = canvas.getContext("2d");
+  const CHARS = "01";
+  let cols, drops, fontSize = 15;
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cols = Math.floor(canvas.width / fontSize);
+    drops = new Array(cols).fill(0).map(()=>Math.floor(Math.random() * -50));
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  if(reduceMotion) return;   // เคารพผู้ใช้ที่ปิดอนิเมชันไว้
+
+  function draw(){
+    ctx.fillStyle = "rgba(15,23,42,.08)";           // ทิ้งรอยจางแบบฝน (โทนเดียวกับพื้นหลังไซต์)
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = fontSize + "px monospace";
+    for(let i=0;i<cols;i++){
+      const ch = CHARS[Math.random() > 0.5 ? 0 : 1];
+      const y = drops[i] * fontSize;
+      ctx.fillStyle = Math.random() > .97 ? "#d1fae5" : "#22c55e";  // นานๆ ทีมีตัวสว่างเด่น
+      ctx.globalAlpha = Math.random() * .5 + .5;
+      ctx.fillText(ch, i * fontSize, y);
+      ctx.globalAlpha = 1;
+      if(y > canvas.height && Math.random() > .975) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
 </script>
 <div class="marquee calbar" id="calbar">
   <span class="ico">📅</span>
