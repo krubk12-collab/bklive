@@ -109,6 +109,7 @@
     font-weight:500;font-size:.9rem;box-shadow:var(--shadow)}
   .eb-add{background:#fff;color:var(--brand)} .eb-exp{background:#fff;color:#0f766e}
   .eb-reset{background:#fff;color:#b91c1c}
+  .eb-pass{background:#fff;color:#7c3aed} .eb-props{background:#fff;color:#0891b2}
   .editflag{display:none;text-align:center;color:#fde68a;font-size:.85rem;margin-top:10px;
     font-weight:300;font-family:'Sarabun',sans-serif}
   body.editing .editflag{display:block}
@@ -216,6 +217,8 @@
     <button class="eb-ann" onclick="openAnnounceEditor()">📢 ประกาศวิ่ง</button>
     <button class="eb-cal" onclick="openCalEditor()">🗓️ จัดการปฏิทิน</button>
     <button class="eb-exp" onclick="exportData()">💾 สำรองข้อมูล</button>
+    <button class="eb-pass" onclick="changePassword()">🔑 เปลี่ยนรหัสผ่าน</button>
+    <button class="eb-props" onclick="openScriptProps()">🗄️ ดูฐานข้อมูล (Script Properties)</button>
     <button class="eb-reset" onclick="resetData()">↺ คืนค่าเริ่มต้น</button>
   </div>
   <div class="editflag">🔓 โหมดแก้ไขเปิดอยู่ — ทุกการเปลี่ยนแปลงบันทึกขึ้นส่วนกลางอัตโนมัติ ทุกคนเห็นทันที</div>
@@ -458,8 +461,7 @@ const DEFAULT_APPS = [
   }
 ];
 
-// ── โหมดแก้ไข: รหัสผ่าน + เก็บข้อมูลในเครื่อง (localStorage) ──
-const EDIT_PASS = "@021916103";
+// ── โหมดแก้ไข: รหัสผ่านตรวจกับส่วนกลางเสมอ (ไม่ยึด const ในเครื่อง — เปลี่ยนรหัสแล้วมีผลทันทีทุกเครื่อง) + เก็บข้อมูลในเครื่อง (localStorage) ──
 const LS_KEY = "bk_portal_apps_v1";
 function loadApps(){
   try{ const s = localStorage.getItem(LS_KEY); if(s){ const a = JSON.parse(s); if(Array.isArray(a) && a.length) return a; } }catch(e){}
@@ -725,26 +727,62 @@ function render(){
   main.innerHTML = total ? html : `<div class="empty">ไม่พบระบบงานที่ตรงกับ “${keyword}”</div>`;
 }
 
+// ── ตรวจรหัสผ่านกับส่วนกลางเสมอ (ไม่ยึดค่าที่เครื่อง — เปลี่ยนรหัสแล้วมีผลทันที) ──
+async function checkPass_(p){
+  try{
+    const res = await fetch(PORTAL_API + "?action=checkPass&pass=" + encodeURIComponent(p), { cache:"no-store" });
+    const j = await res.json();
+    return !!(j && j.ok);
+  }catch(e){ return false; }
+}
+
 // ── การ์ดส่วนตัว: ต้องใส่รหัสก่อนเปิด ──
-function openPrivate(ev, encUrl){
+async function openPrivate(ev, encUrl){
   ev.preventDefault();
   const p = prompt("🔒 ระบบนี้ตั้งเป็นส่วนตัว — ใส่รหัสผ่านเพื่อเข้าใช้งาน");
   if(p === null) return;
-  if(p === EDIT_PASS) window.open(decodeURIComponent(encUrl), "_blank", "noopener");
+  if(await checkPass_(p)) window.open(decodeURIComponent(encUrl), "_blank", "noopener");
   else alert("รหัสผ่านไม่ถูกต้อง");
 }
 
 // ── สลับโหมดแก้ไข (ป้องกันด้วยรหัส) ──
-function toggleEdit(){
+async function toggleEdit(){
   if(editMode){
     editMode = false; document.body.classList.remove("editing");
     document.getElementById("fab").textContent = "✏️ แก้ไข"; render(); return;
   }
   const p = prompt("ใส่รหัสผ่านเพื่อเข้าโหมดแก้ไข");
   if(p === null) return;
-  if(p !== EDIT_PASS){ alert("รหัสผ่านไม่ถูกต้อง"); return; }
+  if(!(await checkPass_(p))){ alert("รหัสผ่านไม่ถูกต้อง"); return; }
   editPass = p; editMode = true; document.body.classList.add("editing");
   document.getElementById("fab").textContent = "✓ เสร็จสิ้น"; render();
+}
+
+// ── เปลี่ยนรหัสผ่านส่วนกลาง (บันทึกเป็น Script Properties ฝั่งเซิร์ฟเวอร์) ──
+async function changePassword(){
+  const oldP = prompt("ใส่รหัสผ่านเดิม เพื่อยืนยันตัวตนก่อนเปลี่ยน");
+  if(oldP === null) return;
+  const newP = prompt("ใส่รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)");
+  if(newP === null) return;
+  if(newP.length < 6){ alert("รหัสใหม่ต้องยาวอย่างน้อย 6 ตัวอักษร"); return; }
+  const confirmP = prompt("พิมพ์รหัสผ่านใหม่อีกครั้งเพื่อยืนยัน");
+  if(confirmP !== newP){ alert("พิมพ์รหัสใหม่ไม่ตรงกันทั้งสองครั้ง ลองใหม่อีกครั้ง"); return; }
+  try{
+    const fd = new FormData();
+    fd.append("changePass", "1");
+    fd.append("oldPass", oldP);
+    fd.append("newPass", newP);
+    const res = await fetch(PORTAL_API, { method:"POST", body: fd });
+    const j = await res.json();
+    if(!j.ok) throw new Error(j.error || "ไม่ทราบสาเหตุ");
+    editPass = newP;   // อัปเดตรหัสในเซสชันนี้ด้วย เผื่อจะกดบันทึกข้อมูลต่อ
+    toast("✓ เปลี่ยนรหัสผ่านแล้ว — จำรหัสใหม่ไว้ใช้ครั้งถัดไปด้วยนะครับ");
+  }catch(e){ toast("⚠️ เปลี่ยนรหัสไม่สำเร็จ ("+e.message+")"); }
+}
+
+// ── เปิดหน้า Script Properties (ที่เก็บข้อมูลจริง — apps/ประกาศ/วันหยุดที่ซ่อน) ──
+function openScriptProps(){
+  window.open("https://script.google.com/home/projects/1p-11dVTIKe1nemMAiMiHbLn0JvtIJEU3H7KAPcQnKhc3VoS9FTvzbqxQ/settings", "_blank", "noopener");
 }
 
 // ── ฟอร์มเพิ่ม/แก้ไข ──
